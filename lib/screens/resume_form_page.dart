@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/firebase_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ResumeWizard extends StatefulWidget {
   const ResumeWizard({super.key});
@@ -36,36 +38,224 @@ class _ResumeWizardState extends State<ResumeWizard>
   final _objectiveController = TextEditingController();
   final _hobbiesController = TextEditingController();
   final _summaryController = TextEditingController();
-  final _projectTitleController = TextEditingController();
-  final _projectDescriptionController = TextEditingController();
-  final _certificationNameController = TextEditingController();
-  final _certificationOrgController = TextEditingController();
   final _dobController = TextEditingController();
   final _nationalityController = TextEditingController();
 
+  // Firebase instances
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<String?> _uploadImage(File image) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final ref = _storage.ref().child('profile_images/${user.uid}');
+      final uploadTask = ref.putFile(image);
+      final snapshot = await uploadTask.whenComplete(() {});
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  Future<void> _saveResume() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You must be logged in to save')),
+          );
+        }
+        return;
+      }
+
+      // Upload profile image if exists
+      String? imageUrl;
+      if (_profileImage != null) {
+        imageUrl = await _uploadImage(_profileImage!);
+      }
+
+      // Prepare resume data
+      final resumeData = {
+        'profileImage': imageUrl,
+        'personalInfo': {
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'dateOfBirth': _dobController.text.trim(),
+          'nationality': _nationalityController.text.trim(),
+          'gender': _selectedGender,
+        },
+        'objective': _objectiveController.text.trim(),
+        'summary': _summaryController.text.trim(),
+        'experiences': _experiences,
+        'education': _education,
+        'skills': _selectedSkills.toList(),
+        'projects': _projects,
+        'certifications': _certifications,
+        'hobbies': _hobbiesController.text.trim(),
+        'languages': _selectedLanguages.toList(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      // Save to Firestore
+      await _firestore
+          .collection('resumes')
+          .doc(user.uid)
+          .set(resumeData, SetOptions(merge: true));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Resume saved successfully!')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving resume: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving resume: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadResumeData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final doc = await _firestore.collection('resumes').doc(user.uid).get();
+      if (!doc.exists) return;
+
+      final data = doc.data() as Map<String, dynamic>;
+
+      // Load profile image
+      if (data['profileImage'] != null) {
+        // Note: This just stores the URL, not the actual File
+        setState(
+          () => _profileImage = null,
+        ); // Would need to download the image
+      }
+
+      // Load personal info
+      if (data['personalInfo'] != null) {
+        final personalInfo = data['personalInfo'] as Map<String, dynamic>;
+        _fullNameController.text = personalInfo['fullName'] ?? '';
+        _emailController.text = personalInfo['email'] ?? '';
+        _phoneController.text = personalInfo['phone'] ?? '';
+        _addressController.text = personalInfo['address'] ?? '';
+        _dobController.text = personalInfo['dateOfBirth'] ?? '';
+        _nationalityController.text = personalInfo['nationality'] ?? '';
+        _selectedGender = personalInfo['gender'];
+      }
+
+      // Load other fields
+      _objectiveController.text = data['objective'] ?? '';
+      _summaryController.text = data['summary'] ?? '';
+      _hobbiesController.text = data['hobbies'] ?? '';
+
+      // Load lists
+      if (data['experiences'] != null) {
+        setState(() {
+          _experiences.clear();
+          _experiences.addAll(
+            (data['experiences'] as List).cast<Map<String, String>>(),
+          );
+        });
+      }
+
+      if (data['education'] != null) {
+        setState(() {
+          _education.clear();
+          _education.addAll(
+            (data['education'] as List).cast<Map<String, String>>(),
+          );
+        });
+      }
+
+      if (data['projects'] != null) {
+        setState(() {
+          _projects.clear();
+          _projects.addAll(
+            (data['projects'] as List).cast<Map<String, String>>(),
+          );
+        });
+      }
+
+      if (data['certifications'] != null) {
+        setState(() {
+          _certifications.clear();
+          _certifications.addAll(
+            (data['certifications'] as List).cast<Map<String, String>>(),
+          );
+        });
+      }
+
+      if (data['skills'] != null) {
+        setState(() {
+          _selectedSkills.clear();
+          _selectedSkills.addAll((data['skills'] as List).cast<String>());
+        });
+      }
+
+      if (data['languages'] != null) {
+        setState(() {
+          _selectedLanguages.clear();
+          _selectedLanguages.addAll((data['languages'] as List).cast<String>());
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading resume: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResumeData();
+  }
+
   Future<void> _pickImage() async {
     try {
-      var status = await Permission.photos.request();
-      if (status.isGranted) {
-        final pickedFile = await ImagePicker().pickImage(
-          source: ImageSource.gallery,
-          maxWidth: 800,
-        );
-        if (pickedFile != null) {
-          setState(() {
-            _profileImage = File(pickedFile.path);
-          });
-        }
-      } else {
+      final status = await Permission.photos.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Permission denied')));
+        return;
+      }
+
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+      );
+
+      if (pickedFile != null && mounted) {
+        setState(() => _profileImage = File(pickedFile.path));
       }
     } catch (e) {
       debugPrint('Image pick error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -87,128 +277,42 @@ class _ResumeWizardState extends State<ResumeWizard>
     }
   }
 
-  Future<void> _saveResume() async {
-    setState(() => _isLoading = true);
-
-    try {
-      String? imageUrl;
-      if (_profileImage != null) {
-        // For demo purposes, using a fixed userId. In a real app, this would come from authentication
-        const userId = 'demo_user';
-        imageUrl = await FirebaseService.uploadImage(_profileImage!, userId);
-      }
-
-      final resumeData = {
-        'profileImage': imageUrl,
-        'personalInfo': {
-          'fullName': _fullNameController.text,
-          'email': _emailController.text,
-          'phone': _phoneController.text,
-          'address': _addressController.text,
-          'dateOfBirth': _dobController.text,
-          'nationality': _nationalityController.text,
-          'gender': _selectedGender,
-        },
-        'objective': _objectiveController.text,
-        'summary': _summaryController.text,
-        'experiences': _experiences,
-        'education': _education,
-        'skills': _selectedSkills.toList(),
-        'projects': _projects,
-        'certifications': _certifications,
-        'hobbies': _hobbiesController.text,
-        'languages': _selectedLanguages.toList(),
-        'lastUpdated': DateTime.now().toIso8601String(),
-      };
-
-      await FirebaseService.saveResume(
-        userId: 'demo_user',
-        resumeData: resumeData,
-      );
-
-      if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Resume saved successfully!')),
-      );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving resume: $e')),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _addExperience() {
-    setState(() {
-      _experiences.add({
-        'jobTitle': '',
-        'company': '',
-        'duration': '',
-        'description': '',
-      });
+  void _addExperience() => setState(() {
+    _experiences.add({
+      'jobTitle': '',
+      'company': '',
+      'duration': '',
+      'description': '',
     });
-  }
+  });
 
-  void _removeExperience(int index) {
-    setState(() {
-      _experiences.removeAt(index);
+  void _removeExperience(int index) =>
+      setState(() => _experiences.removeAt(index));
+
+  void _addEducation() => setState(() {
+    _education.add({
+      'degree': '',
+      'institution': '',
+      'year': '',
+      'description': '',
     });
-  }
+  });
 
-  void _addEducation() {
-    setState(() {
-      _education.add({
-        'degree': '',
-        'institution': '',
-        'year': '',
-        'description': '',
-      });
-    });
-  }
+  void _removeEducation(int index) =>
+      setState(() => _education.removeAt(index));
 
-  void _removeEducation(int index) {
-    setState(() {
-      _education.removeAt(index);
-    });
-  }
+  void _addProject() => setState(() {
+    _projects.add({'title': '', 'description': ''});
+  });
 
-  void _addProject() {
-    setState(() {
-      _projects.add({
-        'title': '',
-        'description': '',
-      });
-    });
-  }
+  void _removeProject(int index) => setState(() => _projects.removeAt(index));
 
-  void _removeProject(int index) {
-    setState(() {
-      _projects.removeAt(index);
-    });
-  }
+  void _addCertification() => setState(() {
+    _certifications.add({'name': '', 'organization': '', 'year': ''});
+  });
 
-  void _addCertification() {
-    setState(() {
-      _certifications.add({
-        'name': '',
-        'organization': '',
-        'year': '',
-      });
-    });
-  }
-
-  void _removeCertification(int index) {
-    setState(() {
-      _certifications.removeAt(index);
-    });
-  }
-
-  @override
-  bool get wantKeepAlive => true;
+  void _removeCertification(int index) =>
+      setState(() => _certifications.removeAt(index));
 
   @override
   void dispose() {
@@ -220,10 +324,6 @@ class _ResumeWizardState extends State<ResumeWizard>
     _objectiveController.dispose();
     _hobbiesController.dispose();
     _summaryController.dispose();
-    _projectTitleController.dispose();
-    _projectDescriptionController.dispose();
-    _certificationNameController.dispose();
-    _certificationOrgController.dispose();
     _dobController.dispose();
     _nationalityController.dispose();
     super.dispose();
@@ -249,373 +349,221 @@ class _ResumeWizardState extends State<ResumeWizard>
           PageView(
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            children: [
-              _buildProfilePage(),
-              _buildContactInfoPage(),
-              _buildWorkExperiencePage(),
-              _buildEducationPage(),
-              _buildObjectivePage(),
-              _buildSkillsPage(),
-              _buildProjectsPage(),
-              _buildCertificationsPage(),
-              _buildHobbiesPage(),
-              _buildLanguagesPage(),
-              _buildPersonalInfoPage(),
-            ],
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            children: _buildPages(),
           ),
           if (_isLoading) const Center(child: CircularProgressIndicator()),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (_currentPage != 0)
-                TextButton.icon(
-                  onPressed: _previousPage,
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Back'),
-                ),
-              if (_currentPage < 10)
-                TextButton.icon(
-                  onPressed: _nextPage,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Next'),
-                ),
-              if (_currentPage == 10)
-                ElevatedButton.icon(
-                  onPressed: _saveResume,
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save Resume'),
-                ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
-  Widget _buildProfilePage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[200],
-                backgroundImage:
-                    _profileImage != null ? FileImage(_profileImage!) : null,
-                child:
-                    _profileImage == null
-                        ? const Icon(
-                          Icons.add_a_photo,
-                          size: 50,
-                          color: Colors.grey,
-                        )
-                        : null,
-              ),
+  List<Widget> _buildPages() => [
+    _buildProfilePage(),
+    _buildContactInfoPage(),
+    _buildWorkExperiencePage(),
+    _buildEducationPage(),
+    _buildObjectivePage(),
+    _buildSkillsPage(),
+    _buildProjectsPage(),
+    _buildCertificationsPage(),
+    _buildHobbiesPage(),
+    _buildLanguagesPage(),
+    _buildPersonalInfoPage(),
+  ];
+
+  Widget _buildBottomNavBar() => BottomAppBar(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (_currentPage != 0)
+            TextButton.icon(
+              onPressed: _previousPage,
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back'),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Profile Picture',
-              style: Theme.of(context).textTheme.titleLarge,
+          if (_currentPage < 10)
+            TextButton.icon(
+              onPressed: _nextPage,
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Next'),
             ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _fullNameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
+          if (_currentPage == 10)
+            ElevatedButton.icon(
+              onPressed: _saveResume,
+              icon: const Icon(Icons.save),
+              label: const Text('Save Resume'),
             ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-            ),
-          ],
-        ),
+        ],
       ),
+    ),
+  );
+
+  Widget _buildProfilePage() {
+    return _buildFormPage(
+      title: 'Profile Picture',
+      children: [
+        GestureDetector(
+          onTap: _pickImage,
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[200],
+            backgroundImage:
+                _profileImage != null ? FileImage(_profileImage!) : null,
+            child:
+                _profileImage == null
+                    ? const Icon(
+                      Icons.add_a_photo,
+                      size: 50,
+                      color: Colors.grey,
+                    )
+                    : null,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildTextFormField(
+          controller: _fullNameController,
+          label: 'Full Name *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+        ),
+        _buildTextFormField(
+          controller: _emailController,
+          label: 'Email *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+        ),
+        _buildTextFormField(
+          controller: _phoneController,
+          label: 'Phone Number *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+        ),
+      ],
     );
   }
 
   Widget _buildContactInfoPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Contact Information',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _fullNameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Name required' : null,
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Email required' : null,
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number *',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value!.isEmpty ? 'Phone required' : null,
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
+    return _buildFormPage(
+      title: 'Contact Information',
+      children: [
+        _buildTextFormField(
+          controller: _fullNameController,
+          label: 'Full Name *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
         ),
-      ),
+        _buildTextFormField(
+          controller: _emailController,
+          label: 'Email *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+        ),
+        _buildTextFormField(
+          controller: _phoneController,
+          label: 'Phone Number *',
+          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+        ),
+        _buildTextFormField(controller: _addressController, label: 'Address'),
+      ],
     );
   }
 
   Widget _buildWorkExperiencePage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Work Experience',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _experiences.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Experience ${index + 1}'),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _removeExperience(index),
-                            ),
-                          ],
-                        ),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Job Title *',
-                border: OutlineInputBorder(),
+    return _buildFormPage(
+      title: 'Work Experience',
+      children: [
+        ..._experiences.asMap().entries.map((entry) {
+          final index = entry.key;
+          final experience = entry.value;
+          return _buildEditableCard(
+            title: 'Experience ${index + 1}',
+            onDelete: () => _removeExperience(index),
+            children: [
+              _buildTextFormField(
+                initialValue: experience['jobTitle'],
+                label: 'Job Title *',
+                onChanged: (value) => experience['jobTitle'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _experiences[index]['jobTitle'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Company *',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: experience['company'],
+                label: 'Company *',
+                onChanged: (value) => experience['company'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _experiences[index]['company'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Duration (e.g., 2020-2022)',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: experience['duration'],
+                label: 'Duration (e.g., 2020-2022)',
+                onChanged: (value) => experience['duration'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _experiences[index]['duration'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-                          maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Job Description',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: experience['description'],
+                label: 'Job Description',
+                maxLines: 3,
+                onChanged: (value) => experience['description'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _experiences[index]['description'] = value;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _addExperience,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Experience'),
-            ),
-          ],
+            ],
+          );
+        }),
+        _buildAddButton(
+          text: 'Add Another Experience',
+          onPressed: _addExperience,
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildEducationPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Education', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 20),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _education.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Education ${index + 1}'),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _removeEducation(index),
-                            ),
-                          ],
-                        ),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Degree *',
-                border: OutlineInputBorder(),
+    return _buildFormPage(
+      title: 'Education',
+      children: [
+        ..._education.asMap().entries.map((entry) {
+          final index = entry.key;
+          final education = entry.value;
+          return _buildEditableCard(
+            title: 'Education ${index + 1}',
+            onDelete: () => _removeEducation(index),
+            children: [
+              _buildTextFormField(
+                initialValue: education['degree'],
+                label: 'Degree *',
+                onChanged: (value) => education['degree'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _education[index]['degree'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Institution *',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: education['institution'],
+                label: 'Institution *',
+                onChanged: (value) => education['institution'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _education[index]['institution'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Year of Graduation',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: education['year'],
+                label: 'Year of Graduation',
+                onChanged: (value) => education['year'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _education[index]['year'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description (Optional)',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: education['description'],
+                label: 'Description (Optional)',
+                maxLines: 3,
+                onChanged: (value) => education['description'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _education[index]['description'] = value;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _addEducation,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Education'),
-            ),
-          ],
+            ],
+          );
+        }),
+        _buildAddButton(
+          text: 'Add Another Education',
+          onPressed: _addEducation,
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildObjectivePage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Resume Objective',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _objectiveController,
-              maxLines: 6,
-              decoration: const InputDecoration(
-                hintText:
-                    'Summarize your career goals and what you bring to a company...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
+    return _buildFormPage(
+      title: 'Resume Objective',
+      children: [
+        _buildTextFormField(
+          controller: _objectiveController,
+          hintText:
+              'Summarize your career goals and what you bring to a company...',
+          maxLines: 6,
         ),
-      ),
+      ],
     );
   }
 
@@ -633,206 +581,110 @@ class _ResumeWizardState extends State<ResumeWizard>
       'Problem Solving',
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Select Your Skills',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                skills.map((skill) {
-                  final isSelected = _selectedSkills.contains(skill);
-                  return FilterChip(
-                    label: Text(skill),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedSkills.add(skill);
-                        } else {
-                          _selectedSkills.remove(skill);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-          ),
-        ],
-      ),
+    return _buildFormPage(
+      title: 'Select Your Skills',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              skills
+                  .map(
+                    (skill) => FilterChip(
+                      label: Text(skill),
+                      selected: _selectedSkills.contains(skill),
+                      onSelected:
+                          (selected) => setState(() {
+                            selected
+                                ? _selectedSkills.add(skill)
+                                : _selectedSkills.remove(skill);
+                          }),
+                    ),
+                  )
+                  .toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildProjectsPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Projects', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 20),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _projects.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Project ${index + 1}'),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _removeProject(index),
-                            ),
-                          ],
-                        ),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Project Title *',
-                border: OutlineInputBorder(),
+    return _buildFormPage(
+      title: 'Projects',
+      children: [
+        ..._projects.asMap().entries.map((entry) {
+          final index = entry.key;
+          final project = entry.value;
+          return _buildEditableCard(
+            title: 'Project ${index + 1}',
+            onDelete: () => _removeProject(index),
+            children: [
+              _buildTextFormField(
+                initialValue: project['title'],
+                label: 'Project Title *',
+                onChanged: (value) => project['title'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _projects[index]['title'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-                          maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Description *',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: project['description'],
+                label: 'Description *',
+                maxLines: 3,
+                onChanged: (value) => project['description'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _projects[index]['description'] = value;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _addProject,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Project'),
-            ),
-          ],
-        ),
-      ),
+            ],
+          );
+        }),
+        _buildAddButton(text: 'Add Another Project', onPressed: _addProject),
+      ],
     );
   }
 
   Widget _buildCertificationsPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Certifications',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _certifications.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Certification ${index + 1}'),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _removeCertification(index),
-                            ),
-                          ],
-                        ),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Certification Name *',
-                border: OutlineInputBorder(),
+    return _buildFormPage(
+      title: 'Certifications',
+      children: [
+        ..._certifications.asMap().entries.map((entry) {
+          final index = entry.key;
+          final certification = entry.value;
+          return _buildEditableCard(
+            title: 'Certification ${index + 1}',
+            onDelete: () => _removeCertification(index),
+            children: [
+              _buildTextFormField(
+                initialValue: certification['name'],
+                label: 'Certification Name *',
+                onChanged: (value) => certification['name'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _certifications[index]['name'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Issuing Organization *',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: certification['organization'],
+                label: 'Issuing Organization *',
+                onChanged:
+                    (value) => certification['organization'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _certifications[index]['organization'] = value;
-                          },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Year Obtained',
-                border: OutlineInputBorder(),
+              _buildTextFormField(
+                initialValue: certification['year'],
+                label: 'Year Obtained',
+                onChanged: (value) => certification['year'] = value ?? '',
               ),
-                          onChanged: (value) {
-                            _certifications[index]['year'] = value;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _addCertification,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Certification'),
-            ),
-          ],
+            ],
+          );
+        }),
+        _buildAddButton(
+          text: 'Add Another Certification',
+          onPressed: _addCertification,
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildHobbiesPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Your Hobbies', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _hobbiesController,
-            maxLines: 5,
-            decoration: const InputDecoration(
-              hintText: 'List your hobbies like reading, traveling, coding...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      ),
+    return _buildFormPage(
+      title: 'Your Hobbies',
+      children: [
+        _buildTextFormField(
+          controller: _hobbiesController,
+          hintText: 'List your hobbies like reading, traveling, coding...',
+          maxLines: 5,
+        ),
+      ],
     );
   }
 
@@ -847,122 +699,171 @@ class _ResumeWizardState extends State<ResumeWizard>
       'Arabic',
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Languages You Know',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                languages.map((lang) {
-                  final isSelected = _selectedLanguages.contains(lang);
-                  return FilterChip(
-                    label: Text(lang),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedLanguages.add(lang);
-                        } else {
-                          _selectedLanguages.remove(lang);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-          ),
-        ],
-      ),
+    return _buildFormPage(
+      title: 'Languages You Know',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              languages
+                  .map(
+                    (lang) => FilterChip(
+                      label: Text(lang),
+                      selected: _selectedLanguages.contains(lang),
+                      onSelected:
+                          (selected) => setState(() {
+                            selected
+                                ? _selectedLanguages.add(lang)
+                                : _selectedLanguages.remove(lang);
+                          }),
+                    ),
+                  )
+                  .toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildPersonalInfoPage() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return _buildFormPage(
+      title: 'Personal Information',
+      children: [
+        _buildTextFormField(
+          controller: _dobController,
+          label: 'Date of Birth',
+          readOnly: true,
+          suffixIcon: const Icon(Icons.calendar_today),
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime.now(),
+            );
+            if (date != null && mounted) {
+              _dobController.text = "${date.day}/${date.month}/${date.year}";
+            }
+          },
+        ),
+        _buildTextFormField(
+          controller: _nationalityController,
+          label: 'Nationality',
+        ),
+        Text('Gender', style: Theme.of(context).textTheme.labelLarge),
+        Row(
           children: [
-            Text(
-              'Personal Information',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _dobController,
-              decoration: const InputDecoration(
-                labelText: 'Date of Birth',
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
-              readOnly: true,
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime.now(),
-                );
-                if (date != null) {
-                  _dobController.text =
-                      "${date.day}/${date.month}/${date.year}";
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _nationalityController,
-              decoration: const InputDecoration(
-                labelText: 'Nationality',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text('Gender', style: Theme.of(context).textTheme.labelLarge),
-            Row(
-              children: [
-                Radio<String>(
-                  value: 'Male',
-                  groupValue: _selectedGender,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedGender = value;
-                    });
-                  },
-                ),
-                const Text('Male'),
-                Radio<String>(
-                  value: 'Female',
-                  groupValue: _selectedGender,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedGender = value;
-                    });
-                  },
-                ),
-                const Text('Female'),
-                Radio<String>(
-                  value: 'Other',
-                  groupValue: _selectedGender,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedGender = value;
-                    });
-                  },
-                ),
-                const Text('Other'),
-              ],
-            ),
+            _buildGenderRadio('Male'),
+            _buildGenderRadio('Female'),
+            _buildGenderRadio('Other'),
           ],
         ),
-      ),
+      ],
     );
   }
+
+  Widget _buildGenderRadio(String gender) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Radio<String>(
+        value: gender,
+        groupValue: _selectedGender,
+        onChanged: (value) => setState(() => _selectedGender = value),
+      ),
+      Text(gender),
+    ],
+  );
+
+  // Reusable widget builders
+  Widget _buildFormPage({
+    required String title,
+    required List<Widget> children,
+  }) => Padding(
+    padding: const EdgeInsets.all(20.0),
+    child: SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildTextFormField({
+    TextEditingController? controller,
+    String? initialValue,
+    String? label,
+    String? hintText,
+    int maxLines = 1,
+    bool readOnly = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+    void Function()? onTap,
+    void Function(String?)? onChanged,
+  }) {
+    final effectiveController =
+        controller ??
+        (initialValue != null
+            ? TextEditingController(text: initialValue)
+            : null);
+
+    return Column(
+      children: [
+        TextFormField(
+          controller: effectiveController,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hintText,
+            border: const OutlineInputBorder(),
+            suffixIcon: suffixIcon,
+          ),
+          maxLines: maxLines,
+          readOnly: readOnly,
+          validator: validator,
+          onTap: onTap,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildEditableCard({
+    required String title,
+    required VoidCallback onDelete,
+    required List<Widget> children,
+  }) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title),
+              IconButton(icon: const Icon(Icons.delete), onPressed: onDelete),
+            ],
+          ),
+          ...children,
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildAddButton({
+    required String text,
+    required VoidCallback onPressed,
+  }) => Column(
+    children: [
+      const SizedBox(height: 20),
+      ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add),
+        label: Text(text),
+      ),
+    ],
+  );
 }
