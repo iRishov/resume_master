@@ -127,9 +127,9 @@ class _ResumeWizardState extends State<ResumeWizard>
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Resume saved successfully!')),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Resume saved successfully!')),
+      );
       }
     } catch (e) {
       if (mounted) {
@@ -447,42 +447,42 @@ class _ResumeWizardState extends State<ResumeWizard>
                             ),
                           ],
                         ),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Job Title *',
-                            border: OutlineInputBorder(),
-                          ),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Job Title *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _experiences[index]['jobTitle'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Company *',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Company *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _experiences[index]['company'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Duration (e.g., 2020-2022)',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Duration (e.g., 2020-2022)',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _experiences[index]['duration'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
                           maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Job Description',
-                            border: OutlineInputBorder(),
-                          ),
+              decoration: const InputDecoration(
+                labelText: 'Job Description',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _experiences[index]['description'] = value;
                           },
@@ -534,42 +534,42 @@ class _ResumeWizardState extends State<ResumeWizard>
                             ),
                           ],
                         ),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Degree *',
-                            border: OutlineInputBorder(),
-                          ),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Degree *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _education[index]['degree'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Institution *',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Institution *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _education[index]['institution'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Year of Graduation',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Year of Graduation',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _education[index]['year'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Description (Optional)',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Description (Optional)',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _education[index]['description'] = value;
                           },
@@ -698,22 +698,22 @@ class _ResumeWizardState extends State<ResumeWizard>
                             ),
                           ],
                         ),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Project Title *',
-                            border: OutlineInputBorder(),
-                          ),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Project Title *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _projects[index]['title'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
                           maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Description *',
-                            border: OutlineInputBorder(),
-                          ),
+              decoration: const InputDecoration(
+                labelText: 'Description *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _projects[index]['description'] = value;
                           },
@@ -768,31 +768,31 @@ class _ResumeWizardState extends State<ResumeWizard>
                             ),
                           ],
                         ),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Certification Name *',
-                            border: OutlineInputBorder(),
-                          ),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Certification Name *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _certifications[index]['name'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Issuing Organization *',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Issuing Organization *',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _certifications[index]['organization'] = value;
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Year Obtained',
-                            border: OutlineInputBorder(),
-                          ),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Year Obtained',
+                border: OutlineInputBorder(),
+              ),
                           onChanged: (value) {
                             _certifications[index]['year'] = value;
                           },

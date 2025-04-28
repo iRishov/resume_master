@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:resume_master/screens/login.dart';
 import 'package:intl/intl.dart';
 import 'package:resume_master/screens/resume_form_page.dart';
+import 'package:resume_master/screens/splash.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -146,7 +147,7 @@ class _HomeState extends State<Home> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(child: Image.asset('assets/images/onboard.jpg')),
+            Image.asset('assets/images/onboard.jpg'),
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -165,7 +166,7 @@ class _HomeState extends State<Home> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.5),
+                      color: Colors.blue.withAlpha(122),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),

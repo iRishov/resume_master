@@ -31,6 +31,29 @@
 
   <title>resume_master</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-analytics-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCsA7j4ekgqRITTxLkkkcUSV-8ws4jw4fM",
+      authDomain: "resume-master-61af6.firebaseapp.com",
+      projectId: "resume-master-61af6",
+      storageBucket: "resume-master-61af6.firebasestorage.app",
+      messagingSenderId: "541168145892",
+      appId: "1:541168145892:web:024bd92ffcbf48f600e3f1",
+      measurementId: "G-V74QTBWY0N"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
