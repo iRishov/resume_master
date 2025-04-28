@@ -1,3 +1,5 @@
+// ignore_for_file: unused_shown_name
+
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -21,4 +23,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'resume-master-61af6.firebasestorage.app',
     measurementId: 'G-V74QTBWY0N',
   );
-} 
+}

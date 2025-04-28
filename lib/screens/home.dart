@@ -31,7 +31,7 @@ class _HomeState extends State<Home> {
       String? name = user.displayName;
 
       // If display name is null, fall back to email
-      if (name == null || name.isEmpty) {
+      if (name!.isEmpty) {
         name = user.email?.split('@')[0] ?? 'User';
       }
 
