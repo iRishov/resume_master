@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:resume_master/screens/login.dart';
+import 'package:intl/intl.dart';
+import 'package:resume_master/screens/resume_form_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -75,7 +77,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        toolbarHeight: 80,
+        toolbarHeight: 90,
         elevation: 0,
         backgroundColor: const Color.fromARGB(255, 41, 106, 218),
         automaticallyImplyLeading: false,
@@ -121,6 +123,14 @@ class _HomeState extends State<Home> {
                           overflow: TextOverflow.ellipsis, // Prevent overflow
                         ),
                       ),
+                      Text(
+                        DateFormat.yMMMEd().format(DateTime.now()),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -133,22 +143,44 @@ class _HomeState extends State<Home> {
           ),
         ),
       ),
-      body: Center(
+      body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Welcome to Resume Master',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 41, 106, 218),
+            Container(child: Image.asset('assets/images/onboard.jpg')),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ResumeWizard()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    colors: [Colors.blue, Colors.lightBlueAccent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'Start creating your professional resume',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Start creating your professional resume',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
           ],
         ),

@@ -14,25 +14,58 @@ class AuthService {
   Future<void> registerUser({
     required String email,
     required String password,
+    required String name,
     required Function(String, bool) showMessage,
     required Function() onSuccess,
   }) async {
     try {
-      await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
+      // Create user in Firebase Auth
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
 
-      showMessage('User Created Successfully', true);
-      onSuccess();
+      // Store user data in Firestore
+      if (userCredential.user != null) {
+        try {
+          Map<String, dynamic> userInfoMap = {
+            'name': name,
+            'email': email.trim(),
+            'imgUrl': '', // Default empty image URL
+            'uid': userCredential.user!.uid,
+            'datePublished': DateTime.now(),
+          };
+
+          await DatabaseMethods().addUser(
+            userCredential.user!.uid,
+            userInfoMap,
+          );
+
+          // Send email verification
+          await userCredential.user!.sendEmailVerification();
+
+          showMessage(
+            'User Created Successfully. Please verify your email.',
+            true,
+          );
+          onSuccess();
+        } catch (e) {
+          // Firestore operation failed - roll back by deleting the user
+          await userCredential.user!.delete();
+          showMessage('Failed to save user data. Please try again.', false);
+          return;
+        }
+      }
     } on FirebaseAuthException catch (e) {
       String message = switch (e.code) {
         'weak-password' => 'The password provided is too weak.',
         'email-already-in-use' => 'This email is already registered.',
         _ => 'Registration failed. Please try again.',
       };
-
       showMessage(message, false);
+    } catch (e) {
+      showMessage('An unexpected error occurred. Please try again.', false);
     }
   }
 

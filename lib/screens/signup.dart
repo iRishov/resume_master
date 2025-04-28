@@ -34,7 +34,7 @@ class _SignUpState extends State<SignUp> {
           ),
         ),
         backgroundColor: Colors.white,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -48,6 +48,7 @@ class _SignUpState extends State<SignUp> {
     await _authService.registerUser(
       email: _emailController.text,
       password: _passwordController.text,
+      name: _nameController.text,
       showMessage: _showMessage,
       onSuccess: () {
         if (!mounted) return;
@@ -106,7 +107,7 @@ class _SignUpState extends State<SignUp> {
                               controller: _nameController,
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your name';
+                                  return 'Please enter your full name';
                                 }
                                 return null;
                               },
@@ -250,8 +251,8 @@ class _SignUpState extends State<SignUp> {
                                   _authService.signInWithGoogle(context);
                                 },
                                 child: Container(
-                                  width: 50,
-                                  height: 50,
+                                  width: 70,
+                                  height: 70,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(50),
@@ -262,7 +263,6 @@ class _SignUpState extends State<SignUp> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 20),
                             ],
                           ),
                           InkWell(
