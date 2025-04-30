@@ -303,6 +303,16 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   itemBuilder:
                       (context) => [
                         const PopupMenuItem(
+                          value: 'preview',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility),
+                              SizedBox(width: 8),
+                              Text('Preview'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
                           value: 'edit',
                           child: Row(
                             children: [
@@ -358,6 +368,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                                 ),
                               ],
                             ),
+                      );
+                    } else if (value == 'preview') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => ResumePreview(resumeData: resume),
+                        ),
                       );
                     }
                   },
