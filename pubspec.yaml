@@ -17,21 +17,19 @@ dependencies:
   intl: ^0.20.2
 
   # Permissions and media
-  permission_handler: ^12.0.0+1
-  image_picker: ^1.1.2
 
   # Firebase
   firebase_core: ^3.13.0
-  cloud_firestore: ^5.6.6
+  cloud_firestore: ^5.6.7
   firebase_storage: ^12.4.5
-  firebase_auth: ^5.5.2
+  firebase_auth: ^5.5.3
   google_sign_in: ^6.3.0
+  app_settings: ^6.1.1
   flutter_lints: ^5.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.3
 
 flutter_icons:
   android: true
@@ -42,6 +40,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/g.png
+    - assets/images/google.png
     - assets/images/onboard.jpg
-    - assets/images/favicon.png
+    - assets/images/logo.png
+    - assets/images/doodle.jpg

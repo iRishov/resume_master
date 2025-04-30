@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-
-import 'screens/resume_form_page.dart';
-import 'screens/home.dart';
-import 'screens/login.dart';
-import 'screens/splash.dart';
+import 'package:resume_master/theme/app_theme.dart';
+import 'package:resume_master/screens/splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +15,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Resume Master',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
       home: const Splash(),
     );
   }

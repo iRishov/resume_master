@@ -2,16 +2,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:resume_master/screens/home.dart';
+import 'package:resume_master/services/auth_service.dart' as auth;
 import 'package:resume_master/services/database.dart';
+import 'package:resume_master/services/firebase_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  User? getCurrentUser() {
-    return _auth.currentUser;
+  User? getCurrentUser() => _auth.currentUser;
+
+  Future<void> signOut() async {
+    try {
+      await Future.wait([_googleSignIn.signOut(), _auth.signOut()]);
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+      rethrow;
+    }
   }
 
-  Future<void> registerUser({
+  Future<UserCredential> registerUser({
     required String email,
     required String password,
     required String name,
@@ -19,79 +29,54 @@ class AuthService {
     required Function() onSuccess,
   }) async {
     try {
-      // Create user in Firebase Auth
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          );
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
 
-      // Store user data in Firestore
-      if (userCredential.user != null) {
-        try {
-          Map<String, dynamic> userInfoMap = {
-            'name': name,
-            'email': email.trim(),
-            'imgUrl': '', // Default empty image URL
-            'uid': userCredential.user!.uid,
-            'datePublished': DateTime.now(),
-          };
+      // Update user display name
+      await userCredential.user?.updateDisplayName(name);
 
-          await DatabaseMethods().addUser(
-            userCredential.user!.uid,
-            userInfoMap,
-          );
-
-          // Send email verification
-          await userCredential.user!.sendEmailVerification();
-
-          showMessage(
-            'User Created Successfully. Please verify your email.',
-            true,
-          );
-          onSuccess();
-        } catch (e) {
-          // Firestore operation failed - roll back by deleting the user
-          await userCredential.user!.delete();
-          showMessage('Failed to save user data. Please try again.', false);
-          return;
-        }
-      }
+      showMessage('User Created Successfully', true);
+      onSuccess();
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       String message = switch (e.code) {
         'weak-password' => 'The password provided is too weak.',
         'email-already-in-use' => 'This email is already registered.',
         _ => 'Registration failed. Please try again.',
       };
+
       showMessage(message, false);
-    } catch (e) {
-      showMessage('An unexpected error occurred. Please try again.', false);
+      rethrow;
     }
   }
 
-  Future<void> loginUser({
+  Future<UserCredential> loginUser({
     required String email,
     required String password,
     required Function(String, bool) showMessage,
     required Function() onSuccess,
   }) async {
     try {
-      await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
 
       showMessage('Login Successful', true);
       onSuccess();
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       String message = switch (e.code) {
         'user-not-found' => 'No user found with this email.',
-        'wrong-password' => 'Invalid password.',
-        'invalid-email' => 'Invalid email format.',
-        'user-disabled' => 'This account has been disabled.',
+        'wrong-password' => 'Wrong password provided.',
+        'invalid-credential' => 'Invalid email or password.',
         _ => 'Login failed. Please try again.',
       };
+
       showMessage(message, false);
+      rethrow;
     }
   }
 
@@ -112,68 +97,55 @@ class AuthService {
     }
   }
 
-  Future<void> signInWithGoogle(BuildContext context) async {
+  Future<User?> signInWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleSignInAccount =
-          await googleSignIn.signIn();
-
-      if (googleSignInAccount == null) {
-        // User canceled the Google Sign-In process
-        return;
+      // Trigger the Google Sign In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        debugPrint('Google sign in was aborted by user');
+        return null;
       }
 
-      final GoogleSignInAuthentication googleSignInAuthentication =
-          await googleSignInAccount.authentication;
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleSignInAuthentication.idToken,
-        accessToken: googleSignInAuthentication.accessToken,
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
-      UserCredential result = await _auth.signInWithCredential(credential);
-      User? userDetails = result.user;
+      // Sign in to Firebase with the Google credential
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      final User? user = userCredential.user;
 
-      if (userDetails != null) {
-        Map<String, dynamic> userInfoMap = {
-          'name': userDetails.displayName,
-          'email': userDetails.email,
-          'imgUrl': userDetails.photoURL,
-          'uid': userDetails.uid,
-        };
-
-        await DatabaseMethods().addUser(userDetails.uid, userInfoMap);
-
-        // Ensure the widget is still mounted before using the context
-        if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const Home()),
-          );
+      if (user != null) {
+        // Update user profile if needed
+        if (user.displayName == null || user.displayName!.isEmpty) {
+          await user.updateDisplayName(googleUser.displayName);
         }
+        if (user.photoURL == null || user.photoURL!.isEmpty) {
+          await user.updatePhotoURL(googleUser.photoUrl);
+        }
+
+        // Create or update user profile in Firestore
+        await FirebaseService().addUserToDatabase(user);
       }
+
+      return user;
     } on FirebaseAuthException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Google Sign-In failed: ${e.message}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'An unexpected error occurred. Please try again.',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        );
-      }
+      debugPrint(
+        'Firebase Auth Error during Google sign in: ${e.code} - ${e.message}',
+      );
+      rethrow;
+    } on Exception catch (e) {
+      debugPrint('Error during Google sign in: $e');
+      rethrow;
     }
   }
+
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 }

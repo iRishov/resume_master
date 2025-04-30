@@ -1,4 +1,4 @@
-// ignore_for_file: unused_import
+// ignore_for_file: unused_import, use_build_context_synchronously
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:resume_master/screens/forgot_password.dart';
 import 'package:resume_master/screens/splash.dart';
 import 'package:resume_master/screens/home.dart';
 import 'package:resume_master/services/auth_service.dart';
+import 'package:resume_master/services/firebase_service.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -19,7 +20,7 @@ class _LoginState extends State<Login> {
   final AuthService _authService = AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>(); // Fixed naming convention
+  final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -44,25 +45,27 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Future<void> login() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    await _authService.loginUser(
-      email: _emailController.text,
-      password: _passwordController.text,
-      showMessage: _showMessage,
-      onSuccess: () {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const Home()),
-        );
-      },
-    );
-
-    if (mounted) setState(() => _isLoading = false);
+    try {
+      await _authService.loginUser(
+        email: _emailController.text,
+        password: _passwordController.text,
+        showMessage: _showMessage,
+        onSuccess: () {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Home()),
+          );
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -73,7 +76,7 @@ class _LoginState extends State<Login> {
         children: [
           Container(
             padding: const EdgeInsets.only(left: 50, right: 50, top: 100),
-            child: Text(
+            child: const Text(
               'Login',
               style: TextStyle(
                 fontWeight: FontWeight.w900,
@@ -86,7 +89,7 @@ class _LoginState extends State<Login> {
           Padding(
             padding: const EdgeInsets.only(top: 200),
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(50),
@@ -103,7 +106,7 @@ class _LoginState extends State<Login> {
                       children: [
                         const SizedBox(height: 50),
                         Form(
-                          key: _formKey, // Use single form key
+                          key: _formKey,
                           child: Column(
                             children: [
                               SizedBox(
@@ -180,7 +183,6 @@ class _LoginState extends State<Login> {
                             alignment: Alignment.centerRight,
                             child: GestureDetector(
                               onTap: () {
-                                // Handle forgot password logic here
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -189,7 +191,7 @@ class _LoginState extends State<Login> {
                                   ),
                                 );
                               },
-                              child: Text(
+                              child: const Text(
                                 'Forgot Password?',
                                 style: TextStyle(color: Colors.blue),
                               ),
@@ -206,7 +208,7 @@ class _LoginState extends State<Login> {
                                     ? null
                                     : () {
                                       if (_formKey.currentState!.validate()) {
-                                        login();
+                                        _login();
                                       }
                                     },
                             style: ElevatedButton.styleFrom(
@@ -237,11 +239,11 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Divider(
-                          color: Colors.grey, // Color of the line
-                          thickness: 1, // Thickness of the line
-                          indent: 20, // Left padding
-                          endIndent: 20, // Right padding
+                        const Divider(
+                          color: Colors.grey,
+                          thickness: 1,
+                          indent: 20,
+                          endIndent: 20,
                         ),
                         Text(
                           'Or Login with',
@@ -255,8 +257,26 @@ class _LoginState extends State<Login> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             GestureDetector(
-                              onTap: () {
-                                _authService.signInWithGoogle(context);
+                              onTap: () async {
+                                try {
+                                  final user =
+                                      await _authService.signInWithGoogle();
+                                  if (user != null && mounted) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const Home(),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    _showMessage(
+                                      'Google sign in failed: ${e.toString()}',
+                                      false,
+                                    );
+                                  }
+                                }
                               },
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -269,7 +289,7 @@ class _LoginState extends State<Login> {
                                       borderRadius: BorderRadius.circular(50),
                                     ),
                                     child: Image.asset(
-                                      'assets/images/g.png',
+                                      'assets/images/google.png',
                                       fit: BoxFit.cover,
                                     ),
                                   ),
@@ -278,10 +298,8 @@ class _LoginState extends State<Login> {
                             ),
                           ],
                         ),
-
                         InkWell(
                           onTap: () {
-                            // Handle sign-up logic here
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -289,8 +307,8 @@ class _LoginState extends State<Login> {
                               ),
                             );
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 20),
+                          child: const Padding(
+                            padding: EdgeInsets.only(top: 20),
                             child: Text(
                               'Don\'t have an account? Sign Up',
                               style: TextStyle(color: Colors.blue),
