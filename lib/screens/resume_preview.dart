@@ -254,18 +254,9 @@ class _ResumePreviewState extends State<ResumePreview> {
                 widget.resumeData['skills'].isNotEmpty)
               _buildSection(
                 title: 'Skills',
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      widget.resumeData['skills'].map<Widget>((skill) {
-                        return Chip(
-                          label: Text(skill),
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary.withAlpha(150),
-                        );
-                      }).toList(),
+                child: Text(
+                  widget.resumeData['skills'].join(', '),
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
 
@@ -274,18 +265,9 @@ class _ResumePreviewState extends State<ResumePreview> {
                 widget.resumeData['languages'].isNotEmpty)
               _buildSection(
                 title: 'Languages',
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      widget.resumeData['languages'].map<Widget>((lang) {
-                        return Chip(
-                          label: Text(lang),
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary.withAlpha(150),
-                        );
-                      }).toList(),
+                child: Text(
+                  widget.resumeData['languages'].join(', '),
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
 
@@ -330,6 +312,27 @@ class _ResumePreviewState extends State<ResumePreview> {
                 child: Text(
                   widget.resumeData['hobbies'],
                   style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+
+            // Gender
+            if (widget.resumeData['personalInfo']['gender'] != null)
+              _buildSection(
+                title: 'Gender',
+                child: Text(
+                  widget.resumeData['personalInfo']['gender'],
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+
+            // Resume Title
+            if (widget.resumeData['title'] != null &&
+                widget.resumeData['title'].isNotEmpty)
+              _buildSection(
+                title: 'Resume Title',
+                child: Text(
+                  widget.resumeData['title'],
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
           ],

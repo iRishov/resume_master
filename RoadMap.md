@@ -1,312 +1,140 @@
-🧭 Complete Development Roadmap — Resume Analyzer App
-A cross-platform (Flutter) job seeker’s toolkit: resume creation, real-time ATS analysis, skill-gap detection, resume version control, job recommendations, LaTeX PDF generation, and gamification features — powered by AI/NLP.
+✅ Phase 0: Planning & Tech Stack Setup
+MVP Definition: Resume builder, ATS analysis, skill-gap detection, resume version control, job recommendations, and AI-assisted suggestions.
 
-🚧 PHASE 0: Planning & Setup (Week 1)
-✅ Finalize Product Scope
-Define MVP: resume builder, analysis, LaTeX resume generation, version control, job match, AI assist
+Tech Stack:
 
-Define advanced features: resume versioning, live score, GPT-assisted suggestions
+Frontend: Flutter with Riverpod or GetX.
 
-Prepare diagrams: SRS, UML, DFD
+Backend: Firebase Realtime Database (NoSQL) and Firebase Authentication.
 
-✅ Tech Setup
-Frontend: Flutter with Riverpod or GetX
+AI/NLP: Integration with GPT APIs for AI suggestions.
 
-Backend: Flask (Python)
+CI/CD: GitHub Actions for Flutter linting and testing.
 
-Database: MySQL
+🔐 Phase 1: Authentication & User Profiles
+Firebase Authentication:
 
-Other Tools: Docker, GitHub Actions, Firebase Auth, spaCy, PyResParser, LaTeX, GPT API
+Email/password, Google, and Facebook sign-in methods.
 
-✅ Repositories & CI/CD
-GitHub repos:
+Utilize firebase_auth and google_sign_in packages.
 
-resume-analyzer-frontend
+User Data Management:
 
-resume-analyzer-backend
+Store user profiles in Firebase Realtime Database under /users/{uid}.
 
-GitHub Actions:
+📝 Phase 2: Resume Data Entry Module
+Multi-Step Form UI:
 
-Flutter: lint, test
+Sections: Personal Info, Education, Work Experience, Projects, Skills, Certifications, Summary.
 
-Flask: test, Docker build
+Data Storage:
 
-🔐 PHASE 1: Authentication & User Profiles (Weeks 2–3)
-✅ Firebase Authentication (Frontend)
-Sign up/sign in via:
+Save resumes under /resumes/{uid}/{resumeId} in Firebase Realtime Database.
 
-Email + password
+Features:
 
-Google OAuth , Facebook
+Field validations, auto-suggestions, section-based saving, and draft functionality.
 
-Use firebase_auth & google_sign_in
+🧠 Phase 3: Resume Analysis & Skill Gap Detection
+NLP Parsing & ATS Score Engine:
 
-✅ Flask Backend Auth
-JWT token handling
+Analyze keyword frequency, format compliance, and skill matching.
 
-bcrypt password hashing
+Return ATS score (0–100), feedback, and skill matches/gaps.
 
-Login, signup, token validation APIs
+Backend Endpoint:
 
-✅ User Table (MySQL)
-sql
-Copy
-Edit
-users (id, name, email, password_hash, auth_type, created_at)
+Implement Cloud Functions or integrate with external APIs for analysis.
 
-📝 PHASE 2: Resume Data Entry Module (Weeks 4–5)
-✅ Multi-Step Form UI (Flutter)
-Personal Info
+Frontend Visuals:
 
-Education
+Display ATS score progress bar, feedback icons, and suggested skills.
 
-Work Experience
+📄 Phase 4: Resume PDF Generation (Optional)
+PDF Generation:
 
-Projects
+Use Flutter packages like pdf and printing to generate resumes in-app.
 
-Skills
+Provide templates and allow users to preview and download PDFs.
 
-Certifications
+💼 Phase 5: Job Recommendations
+Job Matching Logic:
 
-Summary
+Use dummy job datasets or integrate with job APIs.
 
-✅ Resume Data Schema
-sql
-Copy
-Edit
-resumes (id, user_id, version_id, section_json, created_at)
-✅ Resume Form Features
-Field validations, auto-suggestions
+Match based on role, skills, location, and experience level.
 
-Section-based save functionality
+UI Features:
 
-Option to save as draft
+Paginated job list with filters and match percentage indicators.
 
-✅ Resume API Endpoints
-POST /resume
+🆕 Phase 6: Resume Version Control
+Data Structure:
 
-PUT /resume/:id
+Store versions under /resumes/{uid}/{resumeId}/versions/{versionId}.
 
-GET /resume/:id
+Features:
 
-DELETE /resume/:id
+Switch between versions, clone resumes, and edit version titles/tags.
 
-🧠 PHASE 3: Resume Analysis & Skill Gap Detection (Weeks 6–7)
-✅ NLP Parsing & ATS Score Engine
-Use spaCy, PyResParser
+🆕 Phase 7: Live Resume Score Assistant
+Real-Time Analysis:
 
-Analyze:
+Analyze each form section live using debounce.
 
-Keyword frequency
+Evaluate word count, passive voice, and keyword presence.
 
-Format compliance
+Frontend Integration:
 
-Skill matching
+Show real-time ATS score per section with alert badges and suggestions.
 
-Return:
+🆕 Phase 8: In-App Resume Builder with AI Suggestions
+GPT Integration:
 
-ATS score (0–100)
+Use OpenAI API or similar for AI-assisted content generation.
 
-Feedback (formatting, tone)
+Inputs: job title, experience, skills.
 
-Skill matches/gaps
+Outputs: bullet points, summaries, improvements.
 
-✅ Backend Endpoint
-POST /analyze_resume
-→ JSON input → returns ATS Score + feedback + missing skills
+UI Features:
 
-✅ Frontend Visuals
-ATS score progress bar
+AI Suggest button for each section with preview and accept/modify options.
 
-✅ / ❌ feedback icons
+Limit API calls per user to manage usage.
 
-Suggested courses/skills list
+🏅 Phase 9: Gamification & Badges
+Achievements Logic:
 
-📄 PHASE 4: Resume PDF Generator via LaTeX (Weeks 8–9)
-✅ Template System
-Admin upload: .tex templates
+Trigger badges for milestones like high ATS scores or using AI Assistant.
 
-Categories: Tech, Management, Creative
+UI Features:
 
-✅ Flask PDF Generator
-subprocess or pandoc
+Badge gallery with animations and progress bars.
 
-Merge LaTeX + user data → generate .pdf
+📊 Phase 10: Admin Panel & Analytics
+Admin Features:
 
-✅ Resume Preview UI
-Resume preview screen
+Manage resume templates, monitor user activity, and track resume stats.
 
-Download/share functionality
+Export data in CSV or Excel formats.
 
-PDF view using flutter_pdfview or webview
+Security:
 
-💼 PHASE 5: Job Recommendations (Weeks 10–11)
-✅ Job Matching Logic
-Use dummy job dataset or RapidAPI/Glassdoor API
+Implement role-based authentication for admin access.
 
-Match based on:
+✅ Phase 11: Testing, QA & Deployment
+Testing:
 
-Role
+Flutter widget and integration tests.
 
-Skills
+Security:
 
-Location
+Firebase security rules and penetration testing.
 
-Experience level
+Deployment:
 
-✅ API Endpoint
-GET /jobs?skills=flutter,python&location=remote
+Flutter Web: Firebase Hosting or Netlify.
 
-✅ Job UI
-Paginated list
+Android/iOS: Deploy to Play Store & App Store.
 
-Filters: Location, Skill, Title
-
-“Match %” indicator
-
-🆕 PHASE 6: Resume Version Control (Weeks 12–13)
-✅ Database Schema
-sql
-Copy
-Edit
-resume_versions (
-id, user_id, version_name, template_type, created_at, updated_at
-)
-✅ Backend Endpoints
-POST /resume/version
-
-GET /resume/versions/:userId
-
-PUT /resume/version/:id
-
-POST /resume/clone/:id
-
-✅ UI Features
-Switch between versions
-
-Create version from scratch or clone
-
-Edit title/tag (e.g. "Frontend Dev v3")
-
-🆕 PHASE 7: Live Resume Score Assistant (Weeks 14–15)
-✅ Backend Partial Analysis
-Analyze each form section live using debounce
-
-Evaluate: word count, passive voice, keyword presence
-
-✅ Endpoint
-POST /analyze/section
-→ returns per-section feedback & score
-
-✅ Flutter Integration
-Show real-time ATS score per section
-
-Alert badges:
-
-“Too long”
-
-“Weak verbs”
-
-“Missing keywords”
-
-✅ Suggestions & Tooltips
-"Try more active verbs"
-
-"Add more technical keywords"
-
-"Cut unnecessary fluff"
-
-🆕 PHASE 8: In-app Resume Builder with AI Suggestions (Weeks 16–17)
-✅ GPT Backend Integration
-Use OpenAI API or local GPT model
-
-Inputs: job title, experience, skills
-
-Outputs: bullet points, summaries, improvements
-
-✅ Endpoints
-POST /ai/autofill
-
-POST /ai/improve
-
-✅ Flutter Integration
-AI Suggest Button for each section
-
-AI-generated preview with Accept/Modify options
-
-Limit API calls (e.g. 5 per day for free tier)
-
-🏅 PHASE 9: Gamification & Badges (Week 18)
-✅ Achievements Logic
-Badge triggers:
-
-ATS score > 80
-
-Analyzed 5 resumes
-
-Used AI Assistant 3x
-
-Store in badges and user_achievements
-
-✅ UI Badge Gallery
-Trophy icons, animations on unlock
-
-Progress bars toward next milestone
-
-📊 PHASE 10: Admin Panel & Analytics (Week 19–20)
-✅ Admin Features
-Upload/manage LaTeX templates
-
-Monitor user activity
-
-Track resume stats per industry
-
-Export data (CSV, Excel)
-
-✅ Secure Routes
-Role-based auth for admin access
-
-Audit logs of admin actions
-
-✅ PHASE 11: Testing, QA & Deployment (Week 21)
-✅ Testing
-Backend: PyTest
-
-Frontend: Flutter widget & integration tests
-
-✅ Security
-JWT validation
-
-Rate limiting
-
-SQL injection protection
-
-Penetration testing using Postman
-
-✅ Deployment
-Backend: Docker → AWS EC2/GCP + Gunicorn + NGINX
-
-Flutter Web: Firebase Hosting / Netlify
-
-Android/iOS: Play Store & App Store
-
-🎯 Optional Future Add-Ons
-
-Feature Description
-🎤 Interview Prep GPT-powered mock interview Q&A
-📱 Offline Mode Store resumes locally in mobile app
-🛒 Resume Template Marketplace Premium templates for sale
-🌐 Multilingual Support Resume generation in multiple languages
-🎯 Role Fit Predictor Match resume to job JD & show match percentage
-✅ Conclusion
-You now have a fully structured, end-to-end development plan for your Resume Analyzer App, covering:
-
-Core resume builder functionality
-
-ATS & skill gap analysis
-
-PDF generation via LaTeX
-
-Advanced features: versioning, real-time score, AI suggestions
-
-Job matching and gamification
