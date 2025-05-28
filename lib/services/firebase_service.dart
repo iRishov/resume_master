@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -55,14 +56,33 @@ class FirebaseService {
     Map<String, dynamic> resumeData,
   ) async {
     try {
-      await _firestore.collection('resumes').add({
+      // Validate user exists
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('User not found');
+      }
+
+      // Validate required fields
+      if (!resumeData.containsKey('personalInfo')) {
+        throw Exception('Resume must contain personal information');
+      }
+
+      // Add metadata
+      final data = {
         ...resumeData,
         'userId': userId,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Save to Firestore
+      await _firestore.collection('resumes').add(data);
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase error saving resume: ${e.code} - ${e.message}');
+      throw Exception('Firebase error: ${getErrorMessage(e)}');
     } catch (e) {
-      throw Exception('Failed to save resume data: $e');
+      debugPrint('Error saving resume: $e');
+      throw Exception('Failed to save resume: $e');
     }
   }
 
@@ -70,23 +90,69 @@ class FirebaseService {
     String userId,
   ) async {
     try {
-      return await _firestore
-          .collection('resumes')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
+      // First check if the user exists
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('User not found');
+      }
+
+      // Then fetch resumes with proper error handling
+      final snapshot =
+          await _firestore
+              .collection('resumes')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+      // Validate the data
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (!data.containsKey('userId') || data['userId'] != userId) {
+          debugPrint('Warning: Resume ${doc.id} has invalid userId');
+        }
+        if (!data.containsKey('updatedAt')) {
+          debugPrint('Warning: Resume ${doc.id} missing updatedAt field');
+        }
+      }
+
+      return snapshot;
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase error fetching resumes: ${e.code} - ${e.message}');
+      throw Exception('Firebase error: ${getErrorMessage(e)}');
     } catch (e) {
-      throw Exception('Failed to fetch user resumes: $e');
+      debugPrint('Error fetching resumes: $e');
+      throw Exception('Failed to fetch resumes: $e');
+    }
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>> getResume(
+    String resumeId,
+  ) async {
+    try {
+      return await _firestore.collection('resumes').doc(resumeId).get();
+    } catch (e) {
+      throw Exception('Failed to fetch resume: $e');
     }
   }
 
   Future<void> updateResume(String resumeId, Map<String, dynamic> data) async {
     try {
-      await _firestore.collection('resumes').doc(resumeId).update({
-        ...data,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // Validate resume exists
+      final resumeDoc =
+          await _firestore.collection('resumes').doc(resumeId).get();
+      if (!resumeDoc.exists) {
+        throw Exception('Resume not found');
+      }
+
+      // Add update timestamp
+      final updateData = {...data, 'updatedAt': FieldValue.serverTimestamp()};
+
+      // Update in Firestore
+      await _firestore.collection('resumes').doc(resumeId).update(updateData);
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase error updating resume: ${e.code} - ${e.message}');
+      throw Exception('Firebase error: ${getErrorMessage(e)}');
     } catch (e) {
+      debugPrint('Error updating resume: $e');
       throw Exception('Failed to update resume: $e');
     }
   }
@@ -102,12 +168,56 @@ class FirebaseService {
   // File Storage
   Future<String> uploadImage(File imageFile, String userId) async {
     try {
-      final ref = _storage.ref().child(
-        'profile_images/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      // Validate file exists
+      if (!await imageFile.exists()) {
+        throw Exception('Image file does not exist');
+      }
+
+      // Validate file size (max 5MB)
+      final fileSize = await imageFile.length();
+      if (fileSize > 5 * 1024 * 1024) {
+        throw Exception('Image file size must be less than 5MB');
+      }
+
+      // Create storage reference with proper path
+      final storageRef = _storage.ref();
+      final profileImagesRef = storageRef.child('profile_images');
+      final userRef = profileImagesRef.child(userId);
+      final imageRef = userRef.child(
+        '${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
-      final uploadTask = await ref.putFile(imageFile);
-      return await uploadTask.ref.getDownloadURL();
+
+      debugPrint('Uploading image to path: ${imageRef.fullPath}');
+
+      // Set metadata for better organization
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'userId': userId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      // Upload file with metadata
+      final uploadTask = await imageRef.putFile(imageFile, metadata);
+      debugPrint(
+        'Upload completed. Bytes transferred: ${uploadTask.bytesTransferred}',
+      );
+
+      // Get download URL
+      final downloadUrl = await imageRef.getDownloadURL();
+      debugPrint('Download URL obtained: $downloadUrl');
+
+      if (downloadUrl.isEmpty) {
+        throw Exception('Failed to get download URL for uploaded image');
+      }
+
+      return downloadUrl;
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase error during upload: ${e.code} - ${e.message}');
+      throw Exception('Firebase error: ${getErrorMessage(e)}');
     } catch (e) {
+      debugPrint('Error uploading image: $e');
       throw Exception('Failed to upload image: $e');
     }
   }
@@ -154,6 +264,64 @@ class FirebaseService {
         return 'Service is currently unavailable';
       default:
         return 'An error occurred: ${e.message}';
+    }
+  }
+
+  Future<void> deleteUserAccount(String userId) async {
+    try {
+      // Get user document first to check if it exists
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+
+      // Delete user's resumes in batches
+      final resumesSnapshot =
+          await _firestore
+              .collection('resumes')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+      // Delete all resumes in batches
+      if (resumesSnapshot.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (var doc in resumesSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      // Delete user's profile image if exists
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        if (userData != null && userData['photoUrl'] != null) {
+          try {
+            final ref = _storage.refFromURL(userData['photoUrl']);
+            await ref.delete();
+          } catch (e) {
+            debugPrint('Error deleting profile image: $e');
+            // Continue with deletion even if image deletion fails
+          }
+        }
+
+        // Delete user document
+        await _firestore.collection('users').doc(userId).delete();
+      }
+
+      // Delete user from Firebase Auth
+      final user = _auth.currentUser;
+      if (user != null) {
+        try {
+          await user.delete();
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'requires-recent-login') {
+            throw Exception(
+              'Please sign in again before deleting your account',
+            );
+          }
+          rethrow;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in deleteUserAccount: $e');
+      throw Exception('Failed to delete user account: $e');
     }
   }
 }

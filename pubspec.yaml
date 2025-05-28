@@ -11,18 +11,19 @@ environment:
 
 dependencies:
   app_settings: ^6.1.1
-  cloud_firestore: ^5.6.7
-  firebase_auth: ^5.5.3
-  firebase_core: ^3.13.0
-  firebase_storage: ^12.4.5
+  cloud_firestore: ^5.6.8
+  firebase_auth: ^5.5.4
+  firebase_core: ^3.13.1
+  firebase_storage: ^12.4.6
   flutter:
     sdk: flutter
-  flutter_lints: ^5.0.0
   google_sign_in: ^6.3.0
   intl: ^0.20.2
   path_provider: ^2.1.5
   pdf: ^3.11.3
   share_plus: ^11.0.0
+  image_picker: ^1.1.2
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +39,9 @@ flutter:
 
   assets:
     - assets/images/google.png
-    - assets/images/onboard.jpg
+    - assets/images/job.jpg
     - assets/images/logo.png
     - assets/images/doodle.jpg
+    - assets/images/score.jpg
+
+

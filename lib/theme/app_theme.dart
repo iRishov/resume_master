@@ -24,14 +24,20 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       surface: surfaceColor,
+      background: backgroundColor,
       error: errorColor,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
+      onSurface: primaryTextColor,
+      onError: Colors.white,
     ),
     scaffoldBackgroundColor: backgroundColor,
     appBarTheme: const AppBarTheme(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: surfaceColor,
+      foregroundColor: primaryTextColor,
       elevation: 0,
       centerTitle: true,
+      iconTheme: IconThemeData(color: primaryTextColor),
     ),
     cardTheme: CardTheme(
       color: surfaceColor,
@@ -40,7 +46,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: surfaceColor,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -91,6 +97,17 @@ class AppTheme {
       ),
       bodyLarge: TextStyle(fontSize: 16, color: primaryTextColor),
       bodyMedium: TextStyle(fontSize: 14, color: secondaryTextColor),
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: surfaceColor,
+      selectedItemColor: primaryColor,
+      unselectedItemColor: secondaryTextColor,
+      type: BottomNavigationBarType.fixed,
+      elevation: 8,
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   );
 }
