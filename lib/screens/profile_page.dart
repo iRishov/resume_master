@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
 import 'package:resume_master/services/resume_scoring_service.dart';
+import 'package:resume_master/services/auth_service.dart';
+import 'package:resume_master/screens/resume_preview.dart';
+import 'package:resume_master/screens/resume_score_screen.dart';
+import 'package:resume_master/screens/home.dart';
+import 'package:resume_master/theme/page_transitions.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -392,9 +398,14 @@ class _ProfilePageState extends State<ProfilePage> {
       _currentIndex = index;
     });
     if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context, fadePageRouteBuilder(const Home()));
     } else if (index == 1) {
-      Navigator.pushReplacementNamed(context, '/scores');
+      Navigator.pushReplacement(
+        context,
+        fadePageRouteBuilder(const ResumeScoreScreen()),
+      );
+    } else if (index == 2) {
+      Navigator.pushReplacementNamed(context, '/profile');
     }
   }
 
@@ -488,14 +499,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _handleDeleteAccount() async {
+  Future<void> _handleDeleteAllResumes() async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Delete Account'),
+            title: const Text('Delete All Resumes'),
             content: const Text(
-              'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+              'Are you sure you want to delete ALL of your resumes? This action cannot be undone.',
             ),
             actions: [
               TextButton(
@@ -505,84 +516,51 @@ class _ProfilePageState extends State<ProfilePage> {
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Delete Account'),
+                child: const Text('Delete All'),
               ),
             ],
           ),
     );
 
     if (shouldDelete == true && mounted) {
+      setState(() => _isLoading = true);
       try {
-        setState(() => _isLoading = true);
-
-        // Show loading dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder:
-              (context) => const Center(child: CircularProgressIndicator()),
-        );
-
         final user = _auth.currentUser;
-        if (user == null) throw Exception('User not authenticated');
-
-        // Delete user account and data
-        await _firebaseService.deleteUserAccount(user.uid);
-
-        if (!mounted) return;
-
-        // Dismiss loading dialog
-        Navigator.pop(context);
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Sign out and navigate to startup screen
-        await _auth.signOut();
-        if (!mounted) return;
-
-        // Navigate to startup screen and clear all previous routes
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/startup',
-          (route) => false,
-        );
-      } catch (e) {
-        if (!mounted) return;
-
-        // Dismiss loading dialog if it's showing
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
+        if (user == null) {
+          debugPrint('No user logged in to delete resumes.');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error: No user logged in.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
         }
 
-        // Handle specific error cases
-        String errorMessage = 'Error deleting account';
-        if (e.toString().contains('requires-recent-login')) {
-          errorMessage = 'Please sign in again before deleting your account';
-        } else if (e.toString().contains('User not authenticated')) {
-          errorMessage = 'You must be signed in to delete your account';
-        } else {
-          errorMessage = 'Error deleting account: ${e.toString()}';
-        }
+        await _firebaseService.deleteAllResumes(user.uid);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('All resumes deleted successfully'),
+              backgroundColor: Colors.green,
             ),
-          ),
-        );
+          );
+          // Refresh stats after deletion
+          _loadUserStats();
+        }
+      } catch (e) {
+        debugPrint('Error deleting all resumes: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete resumes: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } finally {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -606,6 +584,7 @@ class _ProfilePageState extends State<ProfilePage> {
             fontWeight: FontWeight.bold,
             fontSize: 24,
             letterSpacing: 0.5,
+            fontFamily: 'CrimsonText',
           ),
         ),
         actions: [
@@ -800,9 +779,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                       endIndent: 16,
                                     ),
                                     _buildActionButtonRedesigned(
-                                      'Delete Account',
-                                      Icons.delete_forever,
-                                      _handleDeleteAccount,
+                                      'Delete All Resumes',
+                                      Icons.delete_sweep_outlined,
+                                      _handleDeleteAllResumes,
                                       isDestructive: true,
                                     ),
                                   ],

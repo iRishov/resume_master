@@ -31,7 +31,6 @@ class BottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.emoji_events_rounded),
           label: 'Scores',
         ),
-
         BottomNavigationBarItem(
           icon: Icon(Icons.person_2_outlined),
           activeIcon: Icon(Icons.person_2_rounded),
@@ -42,6 +41,8 @@ class BottomNavBar extends StatelessWidget {
       elevation: 12,
       selectedFontSize: 14,
       unselectedFontSize: 13,
+      selectedLabelStyle: TextStyle(fontFamily: 'CrimsonText'),
+      unselectedLabelStyle: TextStyle(fontFamily: 'CrimsonText'),
     );
   }
 }

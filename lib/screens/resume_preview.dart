@@ -5,11 +5,17 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'dart:typed_data';
+import '../models/resume.dart';
+import '../models/experience.dart';
+import '../models/education.dart';
+import '../models/project.dart';
+import '../models/certification.dart';
+import 'dart:async';
 
 class ResumePreview extends StatefulWidget {
-  final Map<String, dynamic> resumeData;
+  final Resume resume;
 
-  const ResumePreview({super.key, required this.resumeData});
+  const ResumePreview({super.key, required this.resume});
 
   @override
   State<ResumePreview> createState() => _ResumePreviewState();
@@ -20,6 +26,15 @@ class _ResumePreviewState extends State<ResumePreview> {
   final bool _isLoading = false;
   String? _errorMessage;
 
+  // Helper to get first name or default
+  String _getFirstName(String? fullName) {
+    if (fullName == null || fullName.isEmpty) {
+      return 'User';
+    }
+    final names = fullName.trim().split(' ');
+    return names.isNotEmpty ? names.first : 'User';
+  }
+
   Future<void> _sharePDF() async {
     if (!mounted) return;
     setState(() {
@@ -27,13 +42,18 @@ class _ResumePreviewState extends State<ResumePreview> {
       _errorMessage = null;
     });
     try {
-      // Generate PDF bytes in memory
-      final Uint8List pdfBytes = await PDFService.generateResumePDFBytes(
-        widget.resumeData,
+      // Generate PDF bytes in memory using the model
+      final Uint8List pdfBytes = await PDFService.generateResumePDFModel(
+        widget.resume,
       );
+      // Create filename based on first name
+      final firstName = _getFirstName(
+        widget.resume.personalInfo['fullName'] as String?,
+      );
+      final filename = '${firstName.toLowerCase()}_resume.pdf';
       // Write to a temp file for sharing
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/resume_share.pdf');
+      final file = File('${tempDir.path}/$filename');
       await file.writeAsBytes(pdfBytes, flush: true);
       // Share the file
       await Share.shareXFiles(
@@ -66,21 +86,19 @@ class _ResumePreviewState extends State<ResumePreview> {
     }
   }
 
-  bool _validateResumeData() {
-    // Only validate personal info as it's the minimum required
-    if (widget.resumeData['personalInfo'] == null ||
-        widget.resumeData['personalInfo']['fullName']?.isEmpty == true) {
-      _errorMessage = 'Please add your name in personal information';
-      return false;
-    }
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final resume = widget.resume;
+    final personalInfo = resume.personalInfo;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Resume Preview'),
+        title: const Text(
+          'Resume Preview',
+          style: TextStyle(
+            fontFamily: 'CrimsonText',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           if (_isGeneratingPDF)
             const Padding(
@@ -120,7 +138,7 @@ class _ResumePreviewState extends State<ResumePreview> {
                         _errorMessage = null;
                       });
                     },
-                    child: Text('Dismiss'),
+                    child: const Text('Dismiss'),
                   ),
                 ],
               ),
@@ -138,95 +156,79 @@ class _ResumePreviewState extends State<ResumePreview> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.resumeData['personalInfo']['fullName'] ?? '',
+                          personalInfo['fullName'] ?? '',
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         _buildInfoRow(
                           icon: Icons.email,
-                          text:
-                              widget.resumeData['personalInfo']['email'] ?? '',
+                          text: personalInfo['email'] ?? '',
                         ),
                         _buildInfoRow(
                           icon: Icons.phone,
-                          text:
-                              widget.resumeData['personalInfo']['phone'] ?? '',
+                          text: personalInfo['phone'] ?? '',
                         ),
                         _buildInfoRow(
                           icon: Icons.location_on,
-                          text:
-                              widget.resumeData['personalInfo']['address'] ??
-                              '',
+                          text: personalInfo['address'] ?? '',
                         ),
-                        if (widget.resumeData['personalInfo']['linkedin'] !=
-                                null &&
-                            widget.resumeData['personalInfo']['linkedin']
-                                .toString()
-                                .isNotEmpty)
+                        if ((personalInfo['linkedin'] ?? '')
+                            .toString()
+                            .isNotEmpty)
                           _buildInfoRow(
                             icon: Icons.link,
-                            text:
-                                'LinkedIn: ${widget.resumeData['personalInfo']['linkedin']}',
+                            text: 'LinkedIn: ${personalInfo['linkedin']}',
                           ),
-                        if (widget.resumeData['personalInfo']['dateOfBirth'] !=
-                            null)
+                        if ((personalInfo['dateOfBirth'] ?? '')
+                            .toString()
+                            .isNotEmpty)
                           _buildInfoRow(
                             icon: Icons.calendar_today,
                             text:
-                                'Date of Birth: ${widget.resumeData['personalInfo']['dateOfBirth']}',
+                                'Date of Birth: ${personalInfo['dateOfBirth']}',
                           ),
-                        if (widget.resumeData['personalInfo']['nationality'] !=
-                            null)
+                        if ((personalInfo['nationality'] ?? '')
+                            .toString()
+                            .isNotEmpty)
                           _buildInfoRow(
                             icon: Icons.public,
-                            text:
-                                'Nationality: ${widget.resumeData['personalInfo']['nationality']}',
+                            text: 'Nationality: ${personalInfo['nationality']}',
                           ),
                       ],
                     ),
                   ),
-
                   const Divider(height: 40),
-
-                  // Professional Summary
-                  if (widget.resumeData['summary'] != null &&
-                      widget.resumeData['summary'].isNotEmpty)
+                  if (resume.summary.isNotEmpty)
                     _buildSection(
                       title: 'Professional Summary',
                       child: Text(
-                        widget.resumeData['summary'],
+                        resume.summary,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
-
-                  // Objective
-                  if (widget.resumeData['objective'] != null &&
-                      widget.resumeData['objective'].isNotEmpty)
+                  if (resume.objective.isNotEmpty)
                     _buildSection(
                       title: 'Objective',
                       child: Text(
-                        widget.resumeData['objective'],
+                        resume.objective,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
-
-                  // Work Experience
-                  if (widget.resumeData['experiences'] != null &&
-                      widget.resumeData['experiences'].isNotEmpty)
+                  if (resume.experiences.isNotEmpty)
                     _buildSection(
                       title: 'Work Experience',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children:
-                            widget.resumeData['experiences'].map<Widget>((exp) {
+                            resume.experiences.map((exp) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      exp['jobTitle'] ?? '',
+                                      exp.jobTitle,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleLarge?.copyWith(
@@ -234,14 +236,14 @@ class _ResumePreviewState extends State<ResumePreview> {
                                       ),
                                     ),
                                     Text(
-                                      exp['company'] ?? '',
+                                      exp.company,
                                       style:
                                           Theme.of(
                                             context,
                                           ).textTheme.titleMedium,
                                     ),
                                     Text(
-                                      exp['duration'] ?? '',
+                                      exp.duration,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium
@@ -249,7 +251,7 @@ class _ResumePreviewState extends State<ResumePreview> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      exp['description'] ?? '',
+                                      exp.description,
                                       style:
                                           Theme.of(context).textTheme.bodyLarge,
                                     ),
@@ -259,23 +261,20 @@ class _ResumePreviewState extends State<ResumePreview> {
                             }).toList(),
                       ),
                     ),
-
-                  // Education
-                  if (widget.resumeData['education'] != null &&
-                      widget.resumeData['education'].isNotEmpty)
+                  if (resume.education.isNotEmpty)
                     _buildSection(
                       title: 'Education',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children:
-                            widget.resumeData['education'].map<Widget>((edu) {
+                            resume.education.map((edu) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      edu['degree'] ?? '',
+                                      edu.degree,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleLarge?.copyWith(
@@ -283,23 +282,22 @@ class _ResumePreviewState extends State<ResumePreview> {
                                       ),
                                     ),
                                     Text(
-                                      edu['institution'] ?? '',
+                                      edu.institution,
                                       style:
                                           Theme.of(
                                             context,
                                           ).textTheme.titleMedium,
                                     ),
                                     Text(
-                                      edu['year'] ?? '',
+                                      edu.year,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium
                                           ?.copyWith(color: Colors.grey[600]),
                                     ),
-                                    if (edu['description'] != null &&
-                                        edu['description'].isNotEmpty)
+                                    if (edu.description.isNotEmpty)
                                       Text(
-                                        edu['description'] ?? '',
+                                        edu.description,
                                         style:
                                             Theme.of(
                                               context,
@@ -311,23 +309,48 @@ class _ResumePreviewState extends State<ResumePreview> {
                             }).toList(),
                       ),
                     ),
-
-                  // Projects
-                  if (widget.resumeData['projects'] != null &&
-                      widget.resumeData['projects'].isNotEmpty)
+                  if (resume.skills.isNotEmpty)
+                    _buildSection(
+                      title: 'Skills',
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            resume.skills.map((skill) {
+                              return Chip(
+                                label: Text(skill),
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.1),
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    ),
+                  if (resume.languages.isNotEmpty)
+                    _buildSection(
+                      title: 'Languages',
+                      child: Text(
+                        resume.languages.join(', '),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                  if (resume.projects.isNotEmpty)
                     _buildSection(
                       title: 'Projects',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children:
-                            widget.resumeData['projects'].map<Widget>((proj) {
+                            resume.projects.map((proj) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      proj['title'] ?? '',
+                                      proj.title,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleLarge?.copyWith(
@@ -335,7 +358,7 @@ class _ResumePreviewState extends State<ResumePreview> {
                                       ),
                                     ),
                                     Text(
-                                      proj['description'] ?? '',
+                                      proj.description,
                                       style:
                                           Theme.of(context).textTheme.bodyLarge,
                                     ),
@@ -345,79 +368,20 @@ class _ResumePreviewState extends State<ResumePreview> {
                             }).toList(),
                       ),
                     ),
-
-                  // Skills
-                  if (widget.resumeData['skills'] != null &&
-                      widget.resumeData['skills'].isNotEmpty)
-                    _buildSection(
-                      title: 'Skills',
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            (widget.resumeData['skills'] as List)
-                                .map<Widget>(
-                                  (skill) => Chip(
-                                    label: Text(skill.toString()),
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.1),
-                                    labelStyle: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ),
-
-                  // Languages
-                  if (widget.resumeData['languages'] != null &&
-                      widget.resumeData['languages'].isNotEmpty)
-                    _buildSection(
-                      title: 'Languages',
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            (widget.resumeData['languages'] as List)
-                                .map<Widget>(
-                                  (lang) => Chip(
-                                    label: Text(lang.toString()),
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.secondary.withOpacity(0.1),
-                                    labelStyle: TextStyle(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.secondary,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ),
-
-                  // Certifications
-                  if (widget.resumeData['certifications'] != null &&
-                      widget.resumeData['certifications'].isNotEmpty)
+                  if (resume.certifications.isNotEmpty)
                     _buildSection(
                       title: 'Certifications',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children:
-                            widget.resumeData['certifications'].map<Widget>((
-                              cert,
-                            ) {
+                            resume.certifications.map((cert) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      cert['name'] ?? '',
+                                      cert.name,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleLarge?.copyWith(
@@ -425,14 +389,14 @@ class _ResumePreviewState extends State<ResumePreview> {
                                       ),
                                     ),
                                     Text(
-                                      cert['organization'] ?? '',
+                                      cert.organization,
                                       style:
                                           Theme.of(
                                             context,
                                           ).textTheme.titleMedium,
                                     ),
                                     Text(
-                                      cert['year'] ?? '',
+                                      cert.year,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium
@@ -444,14 +408,11 @@ class _ResumePreviewState extends State<ResumePreview> {
                             }).toList(),
                       ),
                     ),
-
-                  // Hobbies
-                  if (widget.resumeData['hobbies'] != null &&
-                      widget.resumeData['hobbies'].isNotEmpty)
+                  if (resume.hobbies.isNotEmpty)
                     _buildSection(
                       title: 'Hobbies & Interests',
                       child: Text(
-                        widget.resumeData['hobbies'],
+                        resume.hobbies,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),

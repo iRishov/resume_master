@@ -165,6 +165,40 @@ class FirebaseService {
     }
   }
 
+  // Function to delete only the user's resumes
+  Future<void> deleteAllResumes(String userId) async {
+    try {
+      final userResumes =
+          await _firestore
+              .collection('resumes')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+      debugPrint(
+        'Attempting to delete ${userResumes.docs.length} resumes for user $userId',
+      );
+      if (userResumes.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (var doc in userResumes.docs) {
+          debugPrint('Adding resume ${doc.id} to batch for deletion.');
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+        debugPrint('Batch delete of resumes committed.');
+      } else {
+        debugPrint('No resumes found for user $userId to delete.');
+      }
+    } on FirebaseException catch (e) {
+      debugPrint(
+        'Firebase error deleting all resumes: ${e.code} - ${e.message}',
+      );
+      throw Exception('Firebase error deleting resumes: ${getErrorMessage(e)}');
+    } catch (e) {
+      debugPrint('Error deleting all resumes: $e');
+      throw Exception('Failed to delete all resumes: $e');
+    }
+  }
+
   // File Storage
   Future<String> uploadImage(File imageFile, String userId) async {
     try {
@@ -264,64 +298,6 @@ class FirebaseService {
         return 'Service is currently unavailable';
       default:
         return 'An error occurred: ${e.message}';
-    }
-  }
-
-  Future<void> deleteUserAccount(String userId) async {
-    try {
-      // Get user document first to check if it exists
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-
-      // Delete user's resumes in batches
-      final resumesSnapshot =
-          await _firestore
-              .collection('resumes')
-              .where('userId', isEqualTo: userId)
-              .get();
-
-      // Delete all resumes in batches
-      if (resumesSnapshot.docs.isNotEmpty) {
-        final batch = _firestore.batch();
-        for (var doc in resumesSnapshot.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-
-      // Delete user's profile image if exists
-      if (userDoc.exists) {
-        final userData = userDoc.data();
-        if (userData != null && userData['photoUrl'] != null) {
-          try {
-            final ref = _storage.refFromURL(userData['photoUrl']);
-            await ref.delete();
-          } catch (e) {
-            debugPrint('Error deleting profile image: $e');
-            // Continue with deletion even if image deletion fails
-          }
-        }
-
-        // Delete user document
-        await _firestore.collection('users').doc(userId).delete();
-      }
-
-      // Delete user from Firebase Auth
-      final user = _auth.currentUser;
-      if (user != null) {
-        try {
-          await user.delete();
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'requires-recent-login') {
-            throw Exception(
-              'Please sign in again before deleting your account',
-            );
-          }
-          rethrow;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error in deleteUserAccount: $e');
-      throw Exception('Failed to delete user account: $e');
     }
   }
 }

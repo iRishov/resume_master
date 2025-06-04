@@ -24,15 +24,18 @@ dependencies:
   share_plus: ^11.0.0
   image_picker: ^1.1.2
   shared_preferences: ^2.5.3
+  flutter_staggered_animations: ^1.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: "^0.13.1"
 
 flutter_icons:
-  android: true
+  android: "launcher_icon"
   ios: true
-  image_path: "assets/images/favicon.png"
+  image_path: "assets/images/logo.png"
 
 flutter:
   uses-material-design: true
@@ -43,5 +46,7 @@ flutter:
     - assets/images/logo.png
     - assets/images/doodle.jpg
     - assets/images/score.jpg
-
-
+    - assets/fonts/CrimsonText-Bold.ttf
+    - assets/fonts/CrimsonText-Regular.ttf
+    - assets/fonts/CrimsonText-SemiBold.ttf
+    - assets/fonts/CrimsonText-Italic.ttf

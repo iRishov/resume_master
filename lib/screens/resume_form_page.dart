@@ -4,6 +4,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:resume_master/screens/home.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:resume_master/widgets/form_fields.dart';
+import '../models/experience.dart';
+import '../models/education.dart';
+import '../widgets/experience_card.dart';
+import '../widgets/education_card.dart';
+import '../models/project.dart';
+import '../models/certification.dart';
+import '../widgets/project_card.dart';
+import '../widgets/certification_card.dart';
+import '../models/resume.dart';
+import 'package:resume_master/widgets/skill_widgets.dart'; // Import the new skill widgets
+import 'dart:async'; // Import dart:async for Timer
 
 class ResumeForm extends StatefulWidget {
   final Map<String, dynamic>? resumeData;
@@ -20,18 +31,10 @@ class _ResumeFormState extends State<ResumeForm>
   bool _isLoading = false;
   late AnimationController _pageAnimationController;
   int _currentStep = 0;
-  final int _totalSteps = 6;
+  final int _totalSteps = 7;
 
-  // Form state variables
-  final Set<String> _selectedSkills = {};
-  final Set<String> _selectedLanguages = {};
-  String? _selectedGender;
-
-  // Dynamic list state variables
-  final List<Map<String, String>> _experiences = [];
-  final List<Map<String, String>> _education = [];
-  final List<Map<String, String>> _projects = [];
-  final List<Map<String, String>> _certifications = [];
+  // Model-driven state
+  Resume? _resume;
 
   // Form controllers
   late TextEditingController _fullNameController;
@@ -44,245 +47,32 @@ class _ResumeFormState extends State<ResumeForm>
   late TextEditingController _dobController;
   late TextEditingController _nationalityController;
   late TextEditingController _linkedinController;
-  late TextEditingController _skillSearchController;
+  late TextEditingController _newSkillController;
 
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Predefined skills and languages lists
+  // Skills and languages
+  final Set<String> _selectedSkills = {};
+  final Set<String> _selectedLanguages = {};
+  String? _selectedGender;
 
-  // Experience controllers
-  final List<Map<String, TextEditingController>> _experienceControllers = [];
+  // Dynamic lists (model-based)
+  final List<Experience> _experiences = [];
+  final List<Education> _education = [];
+  final List<Project> _projects = [];
+  final List<Certification> _certifications = [];
 
-  // Skill search state
-  String _skillSearchQuery = '';
-  String _selectedSkillCategory = 'All';
-
-  // Cache for filtered skills
-  List<String>? _cachedFilteredSkills;
-  String? _lastSearchQuery;
-  String? _lastSelectedCategory;
-
-  // Add this map for skill categories
-  final Map<String, List<String>> _skillCategories = {
-    'All': [],
-    'Programming Languages': [
-      'Python',
-      'Java',
-      'JavaScript',
-      'C++',
-      'C#',
-      'PHP',
-      'Swift',
-      'Kotlin',
-      'TypeScript',
-      'Ruby',
-      'Go',
-      'Rust',
-      'Scala',
-      'R',
-      'MATLAB',
-      'Perl',
-      'Shell Scripting',
-      'Assembly',
-    ],
-    'Web Development': [
-      'HTML5',
-      'CSS3',
-      'React',
-      'Angular',
-      'Vue.js',
-      'Node.js',
-      'Express.js',
-      'Next.js',
-      'Django',
-      'Flask',
-      'Laravel',
-      'Spring Boot',
-      'jQuery',
-      'Bootstrap',
-      'Tailwind CSS',
-      'SASS/SCSS',
-      'Redux',
-      'GraphQL',
-      'REST APIs',
-      'WebSocket',
-      'Webpack',
-      'Babel',
-    ],
-    'Mobile Development': [
-      'Flutter',
-      'React Native',
-      'Android',
-      'iOS',
-      'Xamarin',
-      'Ionic',
-      'Swift',
-      'Kotlin',
-      'Objective-C',
-      'Mobile UI/UX',
-      'App Store',
-      'Google Play',
-      'Firebase Mobile',
-      'Mobile Testing',
-    ],
-    'Database & Cloud': [
-      'SQL',
-      'MongoDB',
-      'PostgreSQL',
-      'MySQL',
-      'AWS',
-      'Azure',
-      'Google Cloud',
-      'Docker',
-      'Kubernetes',
-      'Firebase',
-      'Redis',
-      'Cassandra',
-      'Oracle',
-      'SQLite',
-      'MariaDB',
-      'Elasticsearch',
-      'DynamoDB',
-      'Cloud Functions',
-      'Serverless',
-      'CI/CD',
-    ],
-    'Data Science & AI': [
-      'Machine Learning',
-      'Deep Learning',
-      'Data Science',
-      'TensorFlow',
-      'PyTorch',
-      'Scikit-learn',
-      'Pandas',
-      'NumPy',
-      'R',
-      'Data Analysis',
-      'Data Visualization',
-      'Natural Language Processing',
-      'Computer Vision',
-      'Big Data',
-      'Hadoop',
-      'Spark',
-      'Tableau',
-      'Power BI',
-      'Statistical Analysis',
-      'Predictive Modeling',
-    ],
-    'DevOps & Tools': [
-      'Git',
-      'CI/CD',
-      'Jenkins',
-      'Ansible',
-      'Terraform',
-      'Linux',
-      'Shell Scripting',
-      'JIRA',
-      'Confluence',
-      'GitHub',
-      'GitLab',
-      'Bitbucket',
-      'Docker',
-      'Kubernetes',
-      'AWS',
-      'Azure',
-      'Google Cloud',
-      'Monitoring',
-      'Logging',
-      'Security',
-      'Networking',
-    ],
-    'Design & UI/UX': [
-      'Figma',
-      'Adobe XD',
-      'Photoshop',
-      'Illustrator',
-      'UI Design',
-      'UX Design',
-      'Wireframing',
-      'Prototyping',
-      'InDesign',
-      'Sketch',
-      'User Research',
-      'User Testing',
-      'Accessibility',
-      'Responsive Design',
-      'Design Systems',
-      'Typography',
-      'Color Theory',
-      'Motion Design',
-      '3D Design',
-      'Brand Design',
-    ],
-    'Soft Skills': [
-      'Communication',
-      'Leadership',
-      'Problem Solving',
-      'Teamwork',
-      'Time Management',
-      'Project Management',
-      'Agile',
-      'Scrum',
-      'Critical Thinking',
-      'Adaptability',
-      'Creativity',
-      'Emotional Intelligence',
-      'Conflict Resolution',
-      'Negotiation',
-      'Public Speaking',
-      'Mentoring',
-      'Strategic Planning',
-      'Decision Making',
-      'Customer Service',
-      'Cross-functional Collaboration',
-    ],
-    'Business & Management': [
-      'Project Management',
-      'Business Analysis',
-      'Strategic Planning',
-      'Risk Management',
-      'Budgeting',
-      'Financial Analysis',
-      'Marketing',
-      'Sales',
-      'Customer Relationship Management',
-      'Supply Chain Management',
-      'Operations Management',
-      'Quality Assurance',
-      'Process Improvement',
-      'Business Development',
-      'Market Research',
-      'Product Management',
-      'Team Leadership',
-      'Stakeholder Management',
-      'Change Management',
-      'Performance Management',
-    ],
-    'Security & Compliance': [
-      'Cybersecurity',
-      'Network Security',
-      'Information Security',
-      'Penetration Testing',
-      'Security Auditing',
-      'Compliance',
-      'GDPR',
-      'HIPAA',
-      'PCI DSS',
-      'Risk Assessment',
-      'Security Architecture',
-      'Cryptography',
-      'Firewall Management',
-      'Security Monitoring',
-      'Incident Response',
-      'Vulnerability Assessment',
-      'Security Policies',
-      'Identity Management',
-      'Access Control',
-      'Security Training',
-    ],
-  };
+  // Progress Tracking
+  bool _isPersonalInfoComplete = false;
+  bool _isSummaryComplete = false;
+  bool _isExperienceComplete = false;
+  bool _isEducationComplete = false;
+  bool _isSkillsComplete = false;
+  bool _isProjectsComplete = false;
+  bool _isCertificationsComplete = false;
+  double _overallProgress = 0.0;
 
   @override
   bool get wantKeepAlive => true;
@@ -296,6 +86,7 @@ class _ResumeFormState extends State<ResumeForm>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    _newSkillController = TextEditingController();
   }
 
   void _initializeControllers() {
@@ -309,273 +100,119 @@ class _ResumeFormState extends State<ResumeForm>
     _objectiveController = TextEditingController();
     _summaryController = TextEditingController();
     _hobbiesController = TextEditingController();
-    _skillSearchController = TextEditingController();
   }
 
-  // Optimized method to get filtered skills
-  List<String> _getFilteredSkills() {
-    // Return cached result if search query and category haven't changed
-    if (_cachedFilteredSkills != null &&
-        _lastSearchQuery == _skillSearchQuery &&
-        _lastSelectedCategory == _selectedSkillCategory) {
-      return _cachedFilteredSkills!;
-    }
-
-    List<String> filteredSkills = [];
-
-    // Get skills from selected category
-    if (_selectedSkillCategory == 'All') {
-      // Combine all skills from all categories
-      for (var skills in _skillCategories.values) {
-        filteredSkills.addAll(skills);
-      }
-    } else {
-      filteredSkills = List.from(
-        _skillCategories[_selectedSkillCategory] ?? [],
-      );
-    }
-
-    // Apply search filter
-    if (_skillSearchQuery.isNotEmpty) {
-      filteredSkills =
-          filteredSkills
-              .where((skill) => skill.toLowerCase().contains(_skillSearchQuery))
-              .toList();
-    }
-
-    // Remove already selected skills
-    filteredSkills =
-        filteredSkills
-            .where((skill) => !_selectedSkills.contains(skill))
-            .toList();
-
-    // Cache the result
-    _cachedFilteredSkills = filteredSkills;
-    _lastSearchQuery = _skillSearchQuery;
-    _lastSelectedCategory = _selectedSkillCategory;
-
-    return filteredSkills;
-  }
-
-  // Optimized method to add experience
-  void _addExperience() {
-    setState(() {
-      _experiences.add({
-        'jobTitle': '',
-        'company': '',
-        'duration': '',
-        'description': '',
-      });
-      _experienceControllers.add({
-        'jobTitle': TextEditingController(),
-        'company': TextEditingController(),
-        'duration': TextEditingController(),
-        'description': TextEditingController(),
-      });
-    });
-  }
-
-  // Optimized method to remove experience
-  void _removeExperience(int index) {
-    setState(() {
-      // Dispose controllers to prevent memory leaks
-      for (var controller in _experienceControllers[index].values) {
-        controller.dispose();
-      }
-      _experiences.removeAt(index);
-      _experienceControllers.removeAt(index);
-    });
-  }
-
-  void _addEducation() => setState(() {
-    _education.add({
-      'degree': '',
-      'institution': '',
-      'year': '',
-      'description': '',
-    });
-  });
-
-  void _removeEducation(int index) =>
-      setState(() => _education.removeAt(index));
-
-  void _addProject() => setState(() {
-    _projects.add({'title': '', 'description': ''});
-  });
-
-  void _removeProject(int index) => setState(() => _projects.removeAt(index));
-
-  void _addCertification() => setState(() {
-    _certifications.add({'name': '', 'organization': '', 'year': ''});
-  });
-
-  void _removeCertification(int index) =>
-      setState(() => _certifications.removeAt(index));
-
+  // Load resume data into model and controllers
   Future<void> _loadResumeData() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        if (!mounted) return;
         setState(() => _isLoading = false);
         return;
       }
-
-      // For new resume creation, initialize with default values
       if (widget.resumeData == null) {
-        setState(() {
-          _fullNameController.text = '';
-          _emailController.text = user.email ?? '';
-          _phoneController.text = '';
-          _addressController.text = '';
-          _dobController.text = '';
-          _nationalityController.text = '';
-          _selectedGender = null;
-          _objectiveController.text = '';
-          _summaryController.text = '';
-          _hobbiesController.text = '';
-          _selectedSkills.clear();
-          _selectedLanguages.clear();
-          _experiences.clear();
-          _education.clear();
-          _projects.clear();
-          _certifications.clear();
-          _experienceControllers.clear();
-          _isLoading = false;
-        });
+        // New resume
+        _resume = null;
+        _fullNameController.text = user.displayName ?? '';
+        _emailController.text = user.email ?? '';
+        _phoneController.text = '';
+        _addressController.text = '';
+        _dobController.text = '';
+        _nationalityController.text = '';
+        _selectedGender = null;
+        _objectiveController.text = '';
+        _summaryController.text = '';
+        _hobbiesController.text = '';
+        _selectedSkills.clear();
+        _selectedLanguages.clear();
+        _experiences.clear();
+        _education.clear();
+        _projects.clear();
+        _certifications.clear();
+        setState(() => _isLoading = false);
+        _updateProgress(); // Calculate initial progress
         return;
       }
-
-      // For editing existing resume
-      _loadDataFromMap(widget.resumeData!);
+      // Editing existing resume
+      // Get the document ID from the map and pass it to fromMap
+      final resumeId = widget.resumeData!['id'] as String? ?? '';
+      _resume = Resume.fromMap(widget.resumeData!, id: resumeId);
+      final pi = _resume!.personalInfo;
+      _fullNameController.text = pi['fullName'] ?? '';
+      _emailController.text = pi['email'] ?? '';
+      _phoneController.text = pi['phone'] ?? '';
+      _addressController.text = pi['address'] ?? '';
+      _dobController.text = pi['dateOfBirth'] ?? '';
+      _nationalityController.text = pi['nationality'] ?? '';
+      _selectedGender = pi['gender'];
+      _linkedinController.text = pi['linkedin'] ?? '';
+      _objectiveController.text = _resume!.objective;
+      _summaryController.text = _resume!.summary;
+      _hobbiesController.text = _resume!.hobbies;
+      _selectedSkills.clear();
+      _selectedSkills.addAll(_resume!.skills);
+      _selectedLanguages.clear();
+      _selectedLanguages.addAll(_resume!.languages);
+      _experiences
+        ..clear()
+        ..addAll(_resume!.experiences);
+      _education
+        ..clear()
+        ..addAll(_resume!.education);
+      _projects
+        ..clear()
+        ..addAll(_resume!.projects);
+      _certifications
+        ..clear()
+        ..addAll(_resume!.certifications);
+      setState(() => _isLoading = false);
+      _updateProgress();
     } catch (e) {
       debugPrint('Error loading resume: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading resume: ${e.toString()}')),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
-  void _loadDataFromMap(Map<String, dynamic> data) {
-    if (!mounted) return;
-
-    setState(() {
-      // Load personal info
-      if (data['personalInfo'] != null) {
-        final personalInfo = data['personalInfo'] as Map<String, dynamic>;
-        _fullNameController.text = personalInfo['fullName']?.toString() ?? '';
-        _emailController.text = personalInfo['email']?.toString() ?? '';
-        _phoneController.text = personalInfo['phone']?.toString() ?? '';
-        _addressController.text = personalInfo['address']?.toString() ?? '';
-        _dobController.text = personalInfo['dateOfBirth']?.toString() ?? '';
-        _nationalityController.text =
-            personalInfo['nationality']?.toString() ?? '';
-        _selectedGender = personalInfo['gender']?.toString();
-        _linkedinController.text = personalInfo['linkedin']?.toString() ?? '';
-      }
-
-      // Load other fields
-      _objectiveController.text = data['objective']?.toString() ?? '';
-      _summaryController.text = data['summary']?.toString() ?? '';
-      _hobbiesController.text = data['hobbies']?.toString() ?? '';
-
-      // Load experiences
-      _experiences.clear();
-      _experienceControllers.clear();
-      if (data['experiences'] != null) {
-        for (final exp in data['experiences'] as List) {
-          final map = exp as Map<String, dynamic>;
-          _experiences.add({
-            'jobTitle': map['jobTitle']?.toString() ?? '',
-            'company': map['company']?.toString() ?? '',
-            'duration': map['duration']?.toString() ?? '',
-            'description': map['description']?.toString() ?? '',
-          });
-          _experienceControllers.add({
-            'jobTitle': TextEditingController(
-              text: map['jobTitle']?.toString() ?? '',
-            ),
-            'company': TextEditingController(
-              text: map['company']?.toString() ?? '',
-            ),
-            'duration': TextEditingController(
-              text: map['duration']?.toString() ?? '',
-            ),
-            'description': TextEditingController(
-              text: map['description']?.toString() ?? '',
-            ),
-          });
-        }
-      }
-
-      _education.clear();
-      if (data['education'] != null) {
-        _education.addAll(
-          (data['education'] as List).map((e) {
-            final map = e as Map<String, dynamic>;
-            return {
-              'degree': map['degree']?.toString() ?? '',
-              'institution': map['institution']?.toString() ?? '',
-              'year': map['year']?.toString() ?? '',
-              'description': map['description']?.toString() ?? '',
-            };
-          }).toList(),
-        );
-      }
-
-      _projects.clear();
-      if (data['projects'] != null) {
-        _projects.addAll(
-          (data['projects'] as List).map((e) {
-            final map = e as Map<String, dynamic>;
-            return {
-              'title': map['title']?.toString() ?? '',
-              'description': map['description']?.toString() ?? '',
-            };
-          }).toList(),
-        );
-      }
-
-      _certifications.clear();
-      if (data['certifications'] != null) {
-        _certifications.addAll(
-          (data['certifications'] as List).map((e) {
-            final map = e as Map<String, dynamic>;
-            return {
-              'name': map['name']?.toString() ?? '',
-              'organization': map['organization']?.toString() ?? '',
-              'year': map['year']?.toString() ?? '',
-            };
-          }).toList(),
-        );
-      }
-
-      _selectedSkills.clear();
-      if (data['skills'] != null) {
-        _selectedSkills.addAll(
-          (data['skills'] as List).map((e) => e.toString()).toList(),
-        );
-      }
-
-      _selectedLanguages.clear();
-      if (data['languages'] != null) {
-        _selectedLanguages.addAll(
-          (data['languages'] as List).map((e) => e.toString()).toList(),
-        );
-      }
-    });
+  // Build Resume model from controllers and lists
+  Resume _buildResumeForSave(String userId) {
+    return Resume(
+      id: _resume?.id ?? '',
+      userId: userId,
+      personalInfo: {
+        'fullName': _fullNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'address': _addressController.text.trim(),
+        'dateOfBirth': _dobController.text.trim(),
+        'nationality': _nationalityController.text.trim(),
+        'gender': _selectedGender,
+        'linkedin': _linkedinController.text.trim(),
+        'isFreshGraduate': _experiences.isEmpty,
+      },
+      summary: _summaryController.text.trim(),
+      objective: _objectiveController.text.trim(),
+      skills: _selectedSkills.where((s) => s.isNotEmpty).toList(),
+      languages: _selectedLanguages.where((l) => l.isNotEmpty).toList(),
+      experiences: List<Experience>.from(_experiences),
+      education: List<Education>.from(_education),
+      projects: List<Project>.from(_projects),
+      certifications: List<Certification>.from(_certifications),
+      hobbies: _hobbiesController.text.trim(),
+      createdAt: _resume?.createdAt,
+      updatedAt: DateTime.now(),
+      title: '${_fullNameController.text.trim()}\'s Resume',
+    );
   }
 
-  // Add this method for handling form submission
+  // Save handler
   Future<void> _handleFormSubmit() async {
     if (_isLoading) return;
-
     // Validate required fields
     if (_fullNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -586,7 +223,6 @@ class _ResumeFormState extends State<ResumeForm>
       );
       return;
     }
-
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -596,7 +232,6 @@ class _ResumeFormState extends State<ResumeForm>
       );
       return;
     }
-
     if (_phoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -606,8 +241,6 @@ class _ResumeFormState extends State<ResumeForm>
       );
       return;
     }
-
-    // Validate education
     if (_education.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -617,18 +250,15 @@ class _ResumeFormState extends State<ResumeForm>
       );
       return;
     }
-
-    // Validate at least one education entry has required fields
     bool hasValidEducation = false;
     for (var edu in _education) {
-      if (edu['degree']?.isNotEmpty == true &&
-          edu['institution']?.isNotEmpty == true &&
-          edu['year']?.isNotEmpty == true) {
+      if (edu.degree.isNotEmpty &&
+          edu.institution.isNotEmpty &&
+          edu.year.isNotEmpty) {
         hasValidEducation = true;
         break;
       }
     }
-
     if (!hasValidEducation) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -640,142 +270,31 @@ class _ResumeFormState extends State<ResumeForm>
       );
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Prepare resume data
-      final resumeData = {
-        'userId': user.uid,
-        'personalInfo': {
-          'fullName': _fullNameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'address': _addressController.text.trim(),
-          'dateOfBirth': _dobController.text.trim(),
-          'nationality': _nationalityController.text.trim(),
-          'gender': _selectedGender,
-          'linkedin': _linkedinController.text.trim(),
-          'isFreshGraduate': _experiences.isEmpty,
-        },
-        'summary': _summaryController.text.trim(),
-        'objective': _objectiveController.text.trim(),
-        'skills':
-            _selectedSkills
-                .where((skill) => skill.isNotEmpty)
-                .map((skill) => skill.toString())
-                .toList(),
-        'languages':
-            _selectedLanguages
-                .where((language) => language.isNotEmpty)
-                .map((language) => language.toString())
-                .toList(),
-        'experiences':
-            _experiences
-                // ignore: unnecessary_null_comparison
-                .where((exp) => exp != null)
-                .map(
-                  (exp) => {
-                    'jobTitle': exp['jobTitle']?.toString().trim() ?? '',
-                    'company': exp['company']?.toString().trim() ?? '',
-                    'duration': exp['duration']?.toString().trim() ?? '',
-                    'description': exp['description']?.toString().trim() ?? '',
-                  },
-                )
-                .where(
-                  (exp) =>
-                      exp['jobTitle']!.isNotEmpty ||
-                      exp['company']!.isNotEmpty ||
-                      exp['duration']!.isNotEmpty ||
-                      exp['description']!.isNotEmpty,
-                )
-                .toList(),
-        'education':
-            _education
-                // ignore: unnecessary_null_comparison
-                .where((edu) => edu != null)
-                .map(
-                  (edu) => {
-                    'degree': edu['degree']?.toString().trim() ?? '',
-                    'institution': edu['institution']?.toString().trim() ?? '',
-                    'year': edu['year']?.toString().trim() ?? '',
-                    'description': edu['description']?.toString().trim() ?? '',
-                  },
-                )
-                .where(
-                  (edu) =>
-                      edu['degree']!.isNotEmpty &&
-                      edu['institution']!.isNotEmpty &&
-                      edu['year']!.isNotEmpty,
-                )
-                .toList(),
-        'projects':
-            _projects
-                // ignore: unnecessary_null_comparison
-                .where((proj) => proj != null)
-                .map(
-                  (proj) => {
-                    'title': proj['title']?.toString().trim() ?? '',
-                    'description': proj['description']?.toString().trim() ?? '',
-                  },
-                )
-                .where(
-                  (proj) =>
-                      proj['title']!.isNotEmpty &&
-                      proj['description']!.isNotEmpty,
-                )
-                .toList(),
-        'certifications':
-            _certifications
-                // ignore: unnecessary_null_comparison
-                .where((cert) => cert != null)
-                .map(
-                  (cert) => {
-                    'name': cert['name']?.toString().trim() ?? '',
-                    'organization':
-                        cert['organization']?.toString().trim() ?? '',
-                    'year': cert['year']?.toString().trim() ?? '',
-                  },
-                )
-                .where(
-                  (cert) =>
-                      cert['name']!.isNotEmpty &&
-                      cert['organization']!.isNotEmpty &&
-                      cert['year']!.isNotEmpty,
-                )
-                .toList(),
-        'hobbies': _hobbiesController.text.trim(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'title': '${_fullNameController.text.trim()}\'s Resume',
-      };
-
+      if (user == null) throw Exception('User not authenticated');
+      final resume = _buildResumeForSave(user.uid);
+      final resumeData = resume.toMap();
       // Add createdAt only for new resumes
-      if (widget.resumeData == null || widget.resumeData!['id'] == null) {
+      if (_resume == null || _resume!.id.isEmpty) {
         resumeData['createdAt'] = FieldValue.serverTimestamp();
       }
-
       // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
-
       // Save to Firestore with retry logic
       int retryCount = 0;
       const maxRetries = 3;
-
       while (retryCount < maxRetries) {
         try {
-          if (widget.resumeData != null && widget.resumeData!['id'] != null) {
+          if (_resume != null && _resume!.id.isNotEmpty) {
             await _firestore
                 .collection('resumes')
-                .doc(widget.resumeData!['id'])
+                .doc(_resume!.id)
                 .update(resumeData);
           } else {
             await _firestore.collection('resumes').add(resumeData);
@@ -783,27 +302,18 @@ class _ResumeFormState extends State<ResumeForm>
           break;
         } catch (e) {
           retryCount++;
-          if (retryCount == maxRetries) {
-            rethrow;
-          }
+          if (retryCount == maxRetries) rethrow;
           await Future.delayed(Duration(seconds: retryCount));
         }
       }
-
       if (!mounted) return;
-
-      // Dismiss loading dialog
-      Navigator.pop(context);
-
-      // Show success message
+      Navigator.pop(context); // Dismiss loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Resume saved successfully!'),
           backgroundColor: Colors.green,
         ),
       );
-
-      // Navigate back to home
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
@@ -824,12 +334,9 @@ class _ResumeFormState extends State<ResumeForm>
       );
     } catch (e) {
       if (!mounted) return;
-
-      // Dismiss loading dialog if it's showing
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving resume: ${e.toString()}'),
@@ -859,16 +366,8 @@ class _ResumeFormState extends State<ResumeForm>
     _dobController.dispose();
     _nationalityController.dispose();
     _linkedinController.dispose();
+    _newSkillController.dispose();
     _pageAnimationController.dispose();
-    _skillSearchController.dispose();
-
-    // Dispose experience controllers
-    for (var controllers in _experienceControllers) {
-      for (var controller in controllers.values) {
-        controller.dispose();
-      }
-    }
-
     super.dispose();
   }
 
@@ -878,8 +377,11 @@ class _ResumeFormState extends State<ResumeForm>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.resumeData != null ? 'Edit Resume' : 'Create Resume',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          _resume == null ? 'Create Resume' : 'Edit Resume',
+          style: const TextStyle(
+            fontFamily: 'CrimsonText',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
@@ -897,6 +399,11 @@ class _ResumeFormState extends State<ResumeForm>
           Column(
             children: [
               _buildStepIndicator(),
+              LinearProgressIndicator(
+                value: _overallProgress,
+                backgroundColor: Colors.grey[300],
+                color: Theme.of(context).colorScheme.primary,
+              ),
               Expanded(
                 child: PageView(
                   controller: _pageController,
@@ -913,6 +420,7 @@ class _ResumeFormState extends State<ResumeForm>
                     _buildEducationStep(),
                     _buildSkillsStep(),
                     _buildProjectsStep(),
+                    _buildCertificationsStep(),
                   ],
                 ),
               ),
@@ -942,96 +450,111 @@ class _ResumeFormState extends State<ResumeForm>
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_totalSteps, (index) {
-              final isActive = index == _currentStep;
-              final isCompleted = index < _currentStep;
-              final isLast = index == _totalSteps - 1;
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Row(
+          children: List.generate(_totalSteps, (index) {
+            final isActive = index == _currentStep;
+            final isCompleted = index < _currentStep;
+            Color stepColor =
+                isCompleted
+                    ? Theme.of(context).colorScheme.primary
+                    : isActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey[400]!;
 
-              return Row(
-                mainAxisSize: MainAxisSize.min,
+            Color textColor =
+                isCompleted
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : isActive
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Colors.grey[700]!;
+
+            Widget stepContent =
+                isCompleted
+                    ? Icon(
+                      Icons.check,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 14,
+                    )
+                    : Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _currentStep = index;
+                });
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              child: Row(
                 children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color:
-                          isActive
-                              ? Theme.of(context).colorScheme.primary
-                              : isCompleted
-                              ? Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.2)
-                              : Colors.grey[200],
-                      border: Border.all(
-                        color:
-                            isActive
-                                ? Theme.of(context).colorScheme.primary
-                                : isCompleted
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey[300]!,
-                        width: 2,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.8,
+                          end: 1.0,
+                        ).animate(_pageAnimationController),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: stepColor,
+                            border: Border.all(
+                              color:
+                                  isCompleted || isActive
+                                      ? stepColor
+                                      : Colors.grey[300]!,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(child: stepContent),
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child:
-                          isCompleted
-                              ? Icon(
-                                Icons.check,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 14,
-                              )
-                              : Text(
-                                '${index + 1}',
-                                style: TextStyle(
-                                  color:
-                                      isActive
-                                          ? Colors.white
-                                          : isCompleted
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.primary
-                                          : Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                    ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _getStepTitle(index),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isActive
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey[700],
+                          fontWeight:
+                              isActive ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (!isLast)
+                  if (index < _totalSteps - 1)
                     Container(
-                      width: 24,
-                      height: 2,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color:
-                            isCompleted
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                      height: 2.0,
+                      width: 40.0,
+                      color:
+                          isCompleted
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey[300],
+                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
                     ),
                 ],
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: (_currentStep + 1) / _totalSteps,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
               ),
-              minHeight: 2,
-            ),
-          ),
-        ],
+            );
+          }),
+        ),
       ),
     );
   }
@@ -1050,6 +573,8 @@ class _ResumeFormState extends State<ResumeForm>
         return 'Skills';
       case 5:
         return 'Projects';
+      case 6:
+        return 'Certifications';
       default:
         return '';
     }
@@ -1060,6 +585,7 @@ class _ResumeFormState extends State<ResumeForm>
       setState(() {
         _currentStep++;
       });
+      _pageAnimationController.forward(from: 0.0);
       _pageController.animateToPage(
         _currentStep,
         duration: const Duration(milliseconds: 300),
@@ -1073,6 +599,7 @@ class _ResumeFormState extends State<ResumeForm>
       setState(() {
         _currentStep--;
       });
+      _pageAnimationController.forward(from: 0.0);
       _pageController.animateToPage(
         _currentStep,
         duration: const Duration(milliseconds: 300),
@@ -1098,128 +625,69 @@ class _ResumeFormState extends State<ResumeForm>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (_currentStep > 0)
-            ElevatedButton.icon(
-              onPressed: _previousStep,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Previous'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+            Tooltip(
+              message: 'Previous Step',
+              child: ElevatedButton.icon(
+                onPressed: _previousStep,
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Previous'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
               ),
             )
           else
             const SizedBox(width: 100),
-          ElevatedButton.icon(
-            onPressed:
-                _currentStep == _totalSteps - 1 ? _handleFormSubmit : _nextStep,
-            icon: Icon(
-              _currentStep == _totalSteps - 1
-                  ? Icons.save
-                  : Icons.arrow_forward,
+          Tooltip(
+            message:
+                _currentStep == _totalSteps - 1 ? 'Save Resume' : 'Next Step',
+            child: ElevatedButton.icon(
+              onPressed:
+                  _isLoading
+                      ? null
+                      : (_currentStep == _totalSteps - 1
+                          ? _handleFormSubmit
+                          : _nextStep),
+              icon:
+                  _isLoading
+                      ? Container(
+                        width: 24,
+                        height: 24,
+                        padding: const EdgeInsets.all(4.0),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                      : Icon(
+                        _currentStep == _totalSteps - 1
+                            ? Icons.save
+                            : Icons.arrow_forward,
+                      ),
+              label:
+                  _isLoading
+                      ? const Text('Saving...')
+                      : Text(
+                        _currentStep == _totalSteps - 1
+                            ? 'Save Resume'
+                            : 'Next',
+                      ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
             ),
-            label: Text(
-              _currentStep == _totalSteps - 1 ? 'Save Resume' : 'Next',
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalInfoStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Personal Information',
-            subtitle: 'Enter your basic details to get started',
-            icon: Icons.person,
-          ),
-          const SizedBox(height: 24),
-          _buildTextFormField(
-            controller: _fullNameController,
-            label: 'Full Name',
-            hintText: 'Enter your full name',
-            isRequired: true,
-            prefixIcon: Icons.person_outline,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _emailController,
-            label: 'Email Address',
-            hintText: 'Enter your email address',
-            isRequired: true,
-            keyboardType: TextInputType.emailAddress,
-            prefixIcon: Icons.email_outlined,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _phoneController,
-            label: 'Phone Number',
-            hintText: 'Enter your phone number',
-            isRequired: true,
-            keyboardType: TextInputType.phone,
-            prefixIcon: Icons.phone_outlined,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _addressController,
-            label: 'Address',
-            hintText: 'Enter your address',
-            prefixIcon: Icons.location_on_outlined,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _dobController,
-            label: 'Date of Birth',
-            hintText: 'Select your date of birth',
-            prefixIcon: Icons.calendar_today_outlined,
-            readOnly: true,
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-              );
-              if (date != null) {
-                _dobController.text = '${date.day}/${date.month}/${date.year}';
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _nationalityController,
-            label: 'Nationality',
-            hintText: 'Enter your nationality',
-            prefixIcon: Icons.public_outlined,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFormField(
-            controller: _linkedinController,
-            label: 'LinkedIn Profile',
-            hintText: 'Enter your LinkedIn profile URL',
-            prefixIcon: Icons.link_outlined,
-          ),
-          const SizedBox(height: 16),
-          GenderSelection(
-            selectedGender: _selectedGender,
-            onChanged: (value) {
-              setState(() {
-                _selectedGender = value;
-              });
-            },
           ),
         ],
       ),
@@ -1276,6 +744,7 @@ class _ResumeFormState extends State<ResumeForm>
     VoidCallback? onTap,
     int? maxLines,
     Function(String?)? onChanged,
+    bool autofocus = false,
   }) {
     return TextFormField(
       controller: controller,
@@ -1311,120 +780,146 @@ class _ResumeFormState extends State<ResumeForm>
         return null;
       },
       onChanged: onChanged,
+      autofocus: autofocus,
     );
   }
 
   Widget _buildSummaryStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Professional Summary',
-            subtitle:
-                'Write a compelling summary of your professional background',
-            icon: Icons.description_outlined,
-          ),
-          const SizedBox(height: 24),
-          _buildTextFormField(
-            controller: _summaryController,
-            label: 'Professional Summary',
-            hintText:
-                'Write a brief summary of your professional background and key achievements',
-            prefixIcon: Icons.work_outline,
-            maxLines: 5,
-          ),
-          const SizedBox(height: 24),
-          _buildTextFormField(
-            controller: _objectiveController,
-            label: 'Career Objective',
-            hintText: 'Write your career objectives and goals',
-            prefixIcon: Icons.flag_outlined,
-            maxLines: 3,
-          ),
-          const SizedBox(height: 24),
-          _buildTextFormField(
-            controller: _hobbiesController,
-            label: 'Hobbies & Interests',
-            hintText: 'List your hobbies and interests',
-            prefixIcon: Icons.sports_esports_outlined,
-            maxLines: 3,
-          ),
-        ],
-      ),
+      child: _buildSummaryStepContent(),
+    );
+  }
+
+  Widget _buildSummaryStepContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Professional Summary',
+          subtitle:
+              'Write a compelling summary of your professional background',
+          icon: Icons.description_outlined,
+        ),
+        const SizedBox(height: 24),
+        _buildTextFormField(
+          controller: _summaryController,
+          label: 'Professional Summary',
+          hintText:
+              'Write a brief summary of your professional background and key achievements',
+          prefixIcon: Icons.work_outline,
+          maxLines: 5,
+          autofocus: false,
+          onChanged: (_) => _updateProgress(),
+        ),
+        const SizedBox(height: 24),
+        _buildTextFormField(
+          controller: _objectiveController,
+          label: 'Career Objective',
+          hintText: 'Write your career objectives and goals',
+          prefixIcon: Icons.flag_outlined,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 24),
+        _buildTextFormField(
+          controller: _hobbiesController,
+          label: 'Hobbies & Interests',
+          hintText: 'List your hobbies and interests',
+          prefixIcon: Icons.sports_esports_outlined,
+          maxLines: 3,
+        ),
+      ],
     );
   }
 
   Widget _buildExperienceStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Work Experience',
-            subtitle:
-                'Optional - Add your work experience or skip if you\'re a fresh graduate',
-            icon: Icons.work,
-          ),
-          const SizedBox(height: 16),
-          // Add information box for fresh graduates
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue[200]!),
+      padding: const EdgeInsets.all(24),
+      child: _buildExperienceStepContent(),
+    );
+  }
+
+  Widget _buildExperienceStepContent() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              title: 'Work Experience',
+              subtitle:
+                  "Optional — Add your work experience or skip if you're a fresh graduate",
+              icon: Icons.work_outline,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Tips for Fresh Graduates',
-                      style: TextStyle(
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
                         color: Colors.blue[700],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        size: 20,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'If you\'re a fresh graduate, you can:',
-                  style: TextStyle(
-                    color: Colors.blue[900],
-                    fontWeight: FontWeight.w500,
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tips for Fresh Graduates',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                _buildTipItem(
-                  'Focus on your education and academic achievements',
-                ),
-                _buildTipItem('Add relevant projects and internships'),
-                _buildTipItem('Highlight your skills and certifications'),
-                _buildTipItem('Include any volunteer work or leadership roles'),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    "If you're a fresh graduate, you can:",
+                    style: TextStyle(
+                      color: Colors.blue[900],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTipItem(
+                    'Focus on your education and academic achievements',
+                  ),
+                  _buildTipItem('Add relevant projects and internships'),
+                  _buildTipItem('Highlight your skills and certifications'),
+                  _buildTipItem(
+                    'Include any volunteer work or leadership roles',
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          if (_experiences.isNotEmpty) ...[
+            const SizedBox(height: 24),
             ...List.generate(_experiences.length, (index) {
-              return _buildExperienceCard(index);
+              return ExperienceCard(
+                experience: _experiences[index],
+                autofocus: false,
+                onChanged: (exp) => _updateExperience(index, exp),
+                onDelete: () => _removeExperience(index),
+              );
             }),
             const SizedBox(height: 16),
+            _buildAddButton(
+              onPressed: _addExperience,
+              label: 'Add Work Experience',
+              icon: Icons.add_circle_outline,
+            ),
           ],
-          _buildAddButton(
-            onPressed: _addExperience,
-            label: 'Add Work Experience',
-            icon: Icons.add_circle_outline,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1448,210 +943,57 @@ class _ResumeFormState extends State<ResumeForm>
     );
   }
 
-  Widget _buildExperienceCard(int index) {
-    final controllers = _experienceControllers[index];
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Experience ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _removeExperience(index),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: controllers['jobTitle']!,
-              label: 'Job Title',
-              hintText: 'Enter your job title',
-              prefixIcon: Icons.work_outline,
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: controllers['company']!,
-              label: 'Company',
-              hintText: 'Enter company name',
-              prefixIcon: Icons.business_outlined,
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: controllers['duration']!,
-              label: 'Duration',
-              hintText: 'e.g., Jan 2020 - Present',
-              prefixIcon: Icons.calendar_today_outlined,
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: controllers['description']!,
-              label: 'Description',
-              hintText: 'Describe your responsibilities and achievements',
-              prefixIcon: Icons.description_outlined,
-              maxLines: 4,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEducationStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Education',
-            subtitle: 'Add your educational background',
-            icon: Icons.school,
-          ),
-          const SizedBox(height: 24),
-          ...List.generate(_education.length, (index) {
-            return _buildEducationCard(index);
-          }),
-          _buildAddButton(
-            onPressed: _addEducation,
-            label: 'Add Education',
-            icon: Icons.add_circle_outline,
-          ),
-        ],
-      ),
+      child: _buildEducationStepContent(),
     );
   }
 
-  Widget _buildEducationCard(int index) {
-    final education = _education[index];
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Education ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _removeEducation(index),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(
-                text: education['degree'] ?? '',
-              ),
-              label: 'Degree',
-              hintText: 'Enter your degree',
-              prefixIcon: Icons.school_outlined,
-              onChanged: (value) => education['degree'] = value ?? '',
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(
-                text: education['institution'] ?? '',
-              ),
-              label: 'Institution',
-              hintText: 'Enter institution name',
-              prefixIcon: Icons.account_balance_outlined,
-              onChanged: (value) => education['institution'] = value ?? '',
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(text: education['year'] ?? ''),
-              label: 'Year',
-              hintText: 'e.g., 2018 - 2022',
-              prefixIcon: Icons.calendar_today_outlined,
-              onChanged: (value) => education['year'] = value ?? '',
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(
-                text: education['description'] ?? '',
-              ),
-              label: 'Description',
-              hintText: 'Describe your education and achievements',
-              prefixIcon: Icons.description_outlined,
-              maxLines: 4,
-              onChanged: (value) => education['description'] = value ?? '',
-            ),
-          ],
+  Widget _buildEducationStepContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Education',
+          subtitle: 'Add your educational background',
+          icon: Icons.school,
         ),
-      ),
+        const SizedBox(height: 24),
+        ...List.generate(_education.length, (index) {
+          return EducationCard(
+            education: _education[index],
+            autofocus: false,
+            onChanged: (edu) => _updateEducation(index, edu),
+            onDelete: () => _removeEducation(index),
+          );
+        }),
+        _buildAddButton(
+          onPressed: _addEducation,
+          label: 'Add Education',
+          icon: Icons.add_circle_outline,
+        ),
+      ],
     );
   }
 
   Widget _buildSkillsStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Skills',
-            subtitle: 'Add your technical and soft skills',
-            icon: Icons.psychology,
-          ),
-          const SizedBox(height: 24),
-          _buildCustomSkills(),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Text(
-            'Available Skills',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          _buildSkillSearchBar(),
-          const SizedBox(height: 16),
-          _buildSkillCategories(),
-          const SizedBox(height: 16),
-          _buildFilteredSkills(),
-          const SizedBox(height: 16),
-          _buildSelectedSkills(),
-        ],
-      ),
+      child: _buildSkillsStepContent(),
     );
   }
 
-  Widget _buildCustomSkills() {
+  Widget _buildSkillsStepContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildSectionHeader(
+          title: 'Skills',
+          subtitle: 'Add your technical and soft skills',
+          icon: Icons.psychology,
+        ),
+        const SizedBox(height: 24),
         Text(
           'Custom Skills',
           style: Theme.of(
@@ -1666,268 +1008,198 @@ class _ResumeFormState extends State<ResumeForm>
           ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
         ),
         const SizedBox(height: 16),
-        CustomFieldList(
-          items: _selectedSkills.toList(),
-          onChanged: (items) {
+        TextField(
+          controller: _newSkillController,
+          decoration: InputDecoration(
+            hintText: 'Enter Your Professional skill',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _addSkill,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+          onSubmitted: (_) => _addSkill(),
+        ),
+        const SizedBox(height: 24),
+        SelectedSkillsDisplay(
+          selectedSkills: _selectedSkills,
+          onSkillRemoved: (skill) {
             setState(() {
-              _selectedSkills.clear();
-              _selectedSkills.addAll(items);
+              _selectedSkills.remove(skill);
+              _updateProgress();
             });
           },
-          label: 'Add Custom Skills',
-          hintText: 'Enter a custom skill',
         ),
       ],
-    );
-  }
-
-  Widget _buildSkillSearchBar() {
-    return TextField(
-      controller: _skillSearchController,
-      decoration: InputDecoration(
-        hintText: 'Search predefined skills...',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon:
-            _skillSearchQuery.isNotEmpty
-                ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _skillSearchController.clear();
-                      _skillSearchQuery = '';
-                      _cachedFilteredSkills = null;
-                    });
-                  },
-                )
-                : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      onChanged: (value) {
-        setState(() {
-          _skillSearchQuery = value.toLowerCase();
-          _cachedFilteredSkills = null;
-        });
-      },
-    );
-  }
-
-  Widget _buildFilteredSkills() {
-    final filteredSkills = _getFilteredSkills();
-    if (filteredSkills.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children:
-          filteredSkills.map((skill) {
-            return FilterChip(
-              label: Text(skill),
-              selected: _selectedSkills.contains(skill),
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedSkills.add(skill);
-                  } else {
-                    _selectedSkills.remove(skill);
-                  }
-                  // Clear cache when selection changes
-                  _cachedFilteredSkills = null;
-                });
-              },
-              selectedColor: Theme.of(
-                context,
-              ).colorScheme.primary.withOpacity(0.2),
-              checkmarkColor: Theme.of(context).colorScheme.primary,
-              labelStyle: TextStyle(
-                color:
-                    _selectedSkills.contains(skill)
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.black87,
-                fontWeight:
-                    _selectedSkills.contains(skill)
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-              ),
-            );
-          }).toList(),
-    );
-  }
-
-  Widget _buildSelectedSkills() {
-    if (_selectedSkills.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Selected Skills',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children:
-              _selectedSkills.map((skill) {
-                return Chip(
-                  label: Text(skill),
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () {
-                    setState(() {
-                      _selectedSkills.remove(skill);
-                      _cachedFilteredSkills = null;
-                    });
-                  },
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.1),
-                  labelStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSkillCategories() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children:
-            _skillCategories.keys.map((category) {
-              final isSelected = category == _selectedSkillCategory;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(category),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedSkillCategory = category;
-                      _cachedFilteredSkills = null;
-                    });
-                  },
-                  selectedColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.2),
-                  checkmarkColor: Theme.of(context).colorScheme.primary,
-                  labelStyle: TextStyle(
-                    color:
-                        isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.black87,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              );
-            }).toList(),
-      ),
     );
   }
 
   Widget _buildProjectsStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            title: 'Projects',
-            subtitle: 'Add your notable projects',
-            icon: Icons.code,
-          ),
-          const SizedBox(height: 24),
-          ...List.generate(_projects.length, (index) {
-            return _buildProjectCard(index);
-          }),
-          _buildAddButton(
-            onPressed: _addProject,
-            label: 'Add Project',
-            icon: Icons.add_circle_outline,
-          ),
-        ],
-      ),
+      child: _buildProjectsStepContent(),
     );
   }
 
-  Widget _buildProjectCard(int index) {
-    final project = _projects[index];
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Project ${index + 1}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _removeProject(index),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(text: project['title'] ?? ''),
-              label: 'Project Title',
-              hintText: 'Enter project title',
-              prefixIcon: Icons.code_outlined,
-              onChanged: (value) => project['title'] = value ?? '',
-            ),
-            const SizedBox(height: 16),
-            _buildTextFormField(
-              controller: TextEditingController(
-                text: project['description'] ?? '',
-              ),
-              label: 'Description',
-              hintText: 'Describe your project and your role',
-              prefixIcon: Icons.description_outlined,
-              maxLines: 4,
-              onChanged: (value) => project['description'] = value ?? '',
-            ),
-          ],
+  Widget _buildProjectsStepContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Projects',
+          subtitle: 'Add your notable projects',
+          icon: Icons.code,
         ),
-      ),
+        const SizedBox(height: 24),
+        ...List.generate(_projects.length, (index) {
+          return ProjectCard(
+            project: _projects[index],
+            autofocus: false,
+            onChanged: (proj) => _updateProject(index, proj),
+            onDelete: () => _removeProject(index),
+          );
+        }),
+        _buildAddButton(
+          onPressed: _addProject,
+          label: 'Add Project',
+          icon: Icons.add_circle_outline,
+        ),
+      ],
     );
   }
+
+  Widget _buildCertificationsStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: _buildCertificationsStepContent(),
+    );
+  }
+
+  Widget _buildCertificationsStepContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Certifications',
+          subtitle: 'Add your certifications',
+          icon: Icons.card_membership,
+        ),
+        const SizedBox(height: 24),
+        ...List.generate(_certifications.length, (index) {
+          return CertificationCard(
+            certification: _certifications[index],
+            autofocus: false,
+            onChanged: (cert) => _updateCertification(index, cert),
+            onDelete: () => _removeCertification(index),
+          );
+        }),
+        _buildAddButton(
+          onPressed: _addCertification,
+          label: 'Add Certification',
+          icon: Icons.add_circle_outline,
+        ),
+      ],
+    );
+  }
+
+  // Add/Remove methods for dynamic lists
+  void _addExperience() => setState(() {
+    _experiences.add(
+      Experience(jobTitle: '', company: '', duration: '', description: ''),
+    );
+    // Request focus for the first field of the newly added experience card
+    // This will be handled by the autofocus logic within ExperienceCard
+    _updateProgress();
+  });
+
+  void _removeExperience(int index) => setState(() {
+    _experiences.removeAt(index);
+    _updateProgress();
+  });
+
+  void _updateExperience(int index, Experience updatedExperience) =>
+      setState(() {
+        if (index >= 0 && index < _experiences.length) {
+          _experiences[index] = updatedExperience;
+        }
+        _updateProgress();
+      });
+
+  void _addEducation() => setState(() {
+    _education.add(
+      Education(degree: '', institution: '', year: '', description: ''),
+    );
+    // Request focus for the first field of the newly added education card
+    // This will be handled by the autofocus logic within EducationCard
+    _updateProgress();
+  });
+
+  void _removeEducation(int index) => setState(() {
+    _education.removeAt(index);
+    _updateProgress();
+  });
+
+  void _updateEducation(int index, Education updatedEducation) => setState(() {
+    if (index >= 0 && index < _education.length) {
+      _education[index] = updatedEducation;
+    }
+    _updateProgress();
+  });
+
+  void _addProject() => setState(() {
+    _projects.add(Project(title: '', description: ''));
+    // Request focus for the first field of the newly added project card
+    // This will be handled by the autofocus logic within ProjectCard
+    _updateProgress();
+  });
+
+  void _removeProject(int index) => setState(() {
+    _projects.removeAt(index);
+    _updateProgress();
+  });
+
+  void _updateProject(int index, Project updatedProject) => setState(() {
+    if (index >= 0 && index < _projects.length) {
+      _projects[index] = updatedProject;
+    }
+    _updateProgress();
+  });
+
+  void _addCertification() => setState(() {
+    _certifications.add(Certification(name: '', organization: '', year: ''));
+    // Request focus for the first field of the newly added certification card
+    // This will be handled by the autofocus logic within CertificationCard
+    _updateProgress();
+  });
+
+  void _removeCertification(int index) => setState(() {
+    _certifications.removeAt(index);
+    _updateProgress();
+  });
+
+  void _updateCertification(int index, Certification updatedCertification) =>
+      setState(() {
+        if (index >= 0 && index < _certifications.length) {
+          _certifications[index] = updatedCertification;
+        }
+        _updateProgress();
+      });
 
   Widget _buildAddButton({
     required VoidCallback onPressed,
@@ -1950,6 +1222,152 @@ class _ResumeFormState extends State<ResumeForm>
           ),
           elevation: 0,
         ),
+      ),
+    );
+  }
+
+  void _addSkill() {
+    final newSkill = _newSkillController.text.trim();
+    if (newSkill.isNotEmpty && !_selectedSkills.contains(newSkill)) {
+      setState(() {
+        _selectedSkills.add(newSkill);
+        _newSkillController.clear();
+        _updateProgress();
+      });
+    }
+  }
+
+  // Helper method to update progress
+  void _updateProgress() {
+    setState(() {
+      _isPersonalInfoComplete =
+          _fullNameController.text.isNotEmpty &&
+          _emailController.text.isNotEmpty &&
+          _phoneController.text.isNotEmpty;
+
+      _isSummaryComplete = _summaryController.text.isNotEmpty;
+
+      _isExperienceComplete = _experiences.isNotEmpty;
+
+      _isEducationComplete = _education.isNotEmpty;
+
+      _isSkillsComplete = _selectedSkills.isNotEmpty;
+
+      _isProjectsComplete = _projects.isNotEmpty;
+
+      _isCertificationsComplete = _certifications.isNotEmpty;
+
+      // ignore: unused_local_variable
+      int completedSections = 0;
+      if (_isPersonalInfoComplete) completedSections++;
+      if (_isSummaryComplete) completedSections++;
+      if (_isExperienceComplete) completedSections++;
+      if (_isEducationComplete) completedSections++;
+      if (_isSkillsComplete) completedSections++;
+      if (_isProjectsComplete) completedSections++;
+      if (_isCertificationsComplete) completedSections++;
+
+      _overallProgress = completedSections / _totalSteps;
+    });
+  }
+
+  Widget _buildPersonalInfoStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+            title: 'Personal Information',
+            subtitle: 'Enter your basic details to get started',
+            icon: Icons.person,
+          ),
+          const SizedBox(height: 24),
+          _buildTextFormField(
+            controller: _fullNameController,
+            label: 'Full Name',
+            hintText: 'Enter your full name',
+            isRequired: true,
+            prefixIcon: Icons.person_outline,
+            autofocus: false,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _emailController,
+            label: 'Email Address',
+            hintText: 'Enter your email address',
+            isRequired: true,
+            keyboardType: TextInputType.emailAddress,
+            prefixIcon: Icons.email_outlined,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _phoneController,
+            label: 'Phone Number',
+            hintText: 'Enter your phone number',
+            isRequired: true,
+            keyboardType: TextInputType.phone,
+            prefixIcon: Icons.phone_outlined,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _addressController,
+            label: 'Address',
+            hintText: 'Enter your address',
+            prefixIcon: Icons.location_on_outlined,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _dobController,
+            label: 'Date of Birth',
+            hintText: 'Select your date of birth',
+            prefixIcon: Icons.calendar_today_outlined,
+            readOnly: true,
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                _dobController.text = '${date.day}/${date.month}/${date.year}';
+                _updateProgress();
+              }
+            },
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _nationalityController,
+            label: 'Nationality',
+            hintText: 'Enter your nationality',
+            prefixIcon: Icons.public_outlined,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          _buildTextFormField(
+            controller: _linkedinController,
+            label: 'LinkedIn Profile',
+            hintText: 'Enter your LinkedIn profile URL',
+            prefixIcon: Icons.link_outlined,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
+          GenderSelection(
+            selectedGender: _selectedGender,
+            onChanged: (value) {
+              setState(() {
+                _selectedGender = value;
+                _updateProgress();
+              });
+            },
+          ),
+        ],
       ),
     );
   }

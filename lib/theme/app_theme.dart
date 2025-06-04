@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Primary colors
-  static const Color primaryColor = Color(0xFF1976D2); // Material Blue
-  static const Color secondaryColor = Color(0xFF42A5F5); // Light Blue
-  static const Color accentColor = Color(0xFF64B5F6); // Lighter Blue
+  static const Color primaryColor = Color(0xFFE65100); // Deep Orange
+  static const Color secondaryColor = Color(0xFFFF9800); // Orange
+  static const Color accentColor = Color(0xFFffb74d); // Light Orange
 
   // Neutral colors
   static const Color backgroundColor = Color(0xFFF5F5F5);
@@ -42,25 +42,25 @@ class AppTheme {
     cardTheme: CardTheme(
       color: surfaceColor,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceColor,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.grey.shade300),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: primaryColor, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: errorColor),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -70,7 +70,7 @@ class AppTheme {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -81,22 +81,52 @@ class AppTheme {
     ),
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontSize: 32,
+        fontSize: 36,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
+        fontFamily: 'CrimsonText',
       ),
       displayMedium: TextStyle(
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
+        fontFamily: 'CrimsonText',
       ),
       displaySmall: TextStyle(
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: FontWeight.bold,
         color: primaryTextColor,
+        fontFamily: 'CrimsonText',
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: primaryTextColor),
-      bodyMedium: TextStyle(fontSize: 14, color: secondaryTextColor),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        color: primaryTextColor,
+        height: 1.5,
+        fontFamily: 'CrimsonText',
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        color: secondaryTextColor,
+        height: 1.4,
+        fontFamily: 'CrimsonText',
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12,
+        color: secondaryTextColor,
+        fontFamily: 'CrimsonText',
+      ),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+        fontFamily: 'CrimsonText',
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: primaryTextColor,
+        fontFamily: 'CrimsonText',
+      ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surfaceColor,

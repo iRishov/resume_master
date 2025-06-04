@@ -3,168 +3,188 @@
 import 'package:flutter/material.dart';
 import 'package:resume_master/screens/login.dart';
 import 'package:resume_master/screens/signup.dart';
+import 'package:resume_master/theme/app_theme.dart';
 
-class Startup extends StatelessWidget {
+class Startup extends StatefulWidget {
   const Startup({super.key});
+
+  @override
+  State<Startup> createState() => _StartupState();
+}
+
+class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<int> _typingAnimation;
+  final String _subtitleText =
+      'Your professional journey starts here'; // New subtitle text
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3), // Animation duration
+    );
+
+    _typingAnimation = IntTween(begin: 0, end: _subtitleText.length).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(
+          0.5,
+          1.0,
+          curve: Curves.linear,
+        ), // Start typing halfway
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.blue.shade700, Colors.blue.shade500],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Background circles
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -50,
-              left: -50,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
-            // Content
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo container
-                  Container(
-                    height: 150,
+      backgroundColor:
+          Theme.of(context).colorScheme.surface, // Use theme surface color
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+            ), // Adjusted padding
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment:
+                  CrossAxisAlignment.center, // Center content horizontally
+              children: [
+                // Logo
+                Center(
+                  child: Image.asset(
+                    'assets/images/logo.png', // Use your logo
+                    height: 150, // Adjusted size
                     width: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                  ),
+                ),
+                const SizedBox(height: 40), // Increased spacing
+                // Title
+                Text(
+                  'Resume Master',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ), // Use theme style
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12), // Spacing
+                // Subtitle with Typing Animation
+                AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return Text(
+                      _subtitleText.substring(
+                        0,
+                        _typingAnimation.value,
+                      ), // Typing effect
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.8),
+                        fontSize: 20, // Increased font size
+                      ), // Use theme style
+                      textAlign: TextAlign.center,
+                    );
+                  },
+                ),
+                const SizedBox(height: 60), // Increased spacing before buttons
+                // Buttons
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Login(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(
+                              context,
+                            ).colorScheme.primary, // Theme primary color
+                        foregroundColor:
+                            Theme.of(
+                              context,
+                            ).colorScheme.onPrimary, // Theme onPrimary color
+                        minimumSize: const Size(
+                          double.infinity,
+                          50,
+                        ), // Full width
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            30,
+                          ), // Theme roundedness
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.cover,
+                        elevation: 4, // Subtle elevation
+                      ),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ), // Fixed style for button text
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  // Title
-                  Text(
-                    'Resume Master',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.2,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 10.0,
-                          color: Colors.black.withOpacity(0.2),
-                          offset: const Offset(2.0, 2.0),
+                    const SizedBox(height: 20), // Spacing between buttons
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SignUp(),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor:
+                            Theme.of(context)
+                                .colorScheme
+                                .primary, // Theme primary color for text
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 1.5,
+                        ), // Theme primary color for border
+                        minimumSize: const Size(
+                          double.infinity,
+                          50,
+                        ), // Full width
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            30,
+                          ), // Theme roundedness
                         ),
-                      ],
+                        elevation: 0, // No elevation for outlined button
+                      ),
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ), // Fixed style for button text
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Subtitle
-                  Text(
-                    'Create professional resumes in minutes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  // Buttons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const Login(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.blue.shade700,
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            elevation: 5,
-                          ),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignUp(),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white),
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

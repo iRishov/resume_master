@@ -264,40 +264,4 @@ class AuthService {
       rethrow;
     }
   }
-
-  Future<void> deleteUserAccount(String userId) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in');
-      }
-
-      // Verify the user ID matches
-      if (user.uid != userId) {
-        throw Exception('User ID mismatch');
-      }
-
-      // First sign out from Google
-      await _googleSignIn.signOut();
-      // Clear any cached Google sign-in state
-      await _googleSignIn.disconnect();
-
-      // Delete user data and account
-      await _firebaseService.deleteUserAccount(userId);
-
-      // Sign out from Firebase Auth
-      await _auth.signOut();
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-        'Firebase Auth Error during account deletion: ${e.code} - ${e.message}',
-      );
-      if (e.code == 'requires-recent-login') {
-        throw Exception('Please sign in again before deleting your account');
-      }
-      rethrow;
-    } catch (e) {
-      debugPrint('Error deleting user account: $e');
-      rethrow;
-    }
-  }
 }

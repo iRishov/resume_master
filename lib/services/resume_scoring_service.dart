@@ -101,6 +101,61 @@ class ResumeScoringService {
     ],
   };
 
+  // Public getter for ATS keywords
+  static Map<String, List<String>> get atsKeywords => _atsKeywords;
+
+  // Get missing ATS keywords from a resume
+  List<String> getMissingAtsKeywords(Map<String, dynamic> resumeData) {
+    try {
+      final skills = resumeData['skills'] as List<dynamic>? ?? [];
+      final summary = resumeData['summary']?.toString() ?? '';
+      final experiences = resumeData['experiences'] as List<dynamic>? ?? [];
+      final projects = resumeData['projects'] as List<dynamic>? ?? [];
+      final certifications =
+          resumeData['certifications'] as List<dynamic>? ?? [];
+
+      // Combine all searchable text for keyword matching
+      final allText = [
+        ...skills.map((s) => s.toString().toLowerCase()),
+        summary.toLowerCase(),
+        ...experiences.map((e) {
+          if (e is Map<String, dynamic>) {
+            return '${e['jobTitle']?.toString().toLowerCase() ?? ''} ${e['company']?.toString().toLowerCase() ?? ''} ${e['description']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+        ...projects.map((p) {
+          if (p is Map<String, dynamic>) {
+            return '${p['title']?.toString().toLowerCase() ?? ''} ${p['description']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+        ...certifications.map((c) {
+          if (c is Map<String, dynamic>) {
+            return '${c['name']?.toString().toLowerCase() ?? ''} ${c['organization']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+      ].join(' ');
+
+      Set<String> missingKeywords = {};
+
+      // Check all industry keywords
+      for (final industry in _atsKeywords.keys) {
+        for (final keyword in _atsKeywords[industry]!) {
+          if (!allText.contains(keyword.toLowerCase())) {
+            missingKeywords.add(keyword); // Add if not found in resume text
+          }
+        }
+      }
+
+      return missingKeywords.toList(); // Return as a list
+    } catch (e) {
+      debugPrint('Error in getMissingAtsKeywords: $e');
+      return []; // Return empty list on error
+    }
+  }
+
   // Calculate total score and provide feedback
   Map<String, dynamic> calculateScore(Map<String, dynamic> resumeData) {
     try {
@@ -1442,6 +1497,285 @@ class ResumeScoringService {
       return const Color(0xFFFFAB91); // Light Orange Border
     } else {
       return const Color(0xFFEF9A9A); // Light Red Border
+    }
+  }
+
+  // Method to infer user's primary technical field based on resume content
+  List<String> inferUserField(Map<String, dynamic> resumeData) {
+    final Map<String, List<String>> fieldKeywords = {
+      'web': [
+        'HTML',
+        'CSS',
+        'JavaScript',
+        'React',
+        'Angular',
+        'Vue.js',
+        'Node.js',
+        'Frontend',
+        'Backend',
+        'Full-stack',
+        'Webpack',
+        'Babel',
+        'REST API',
+        'GraphQL',
+        'Responsive Design',
+        'UI/UX',
+        'Browser',
+        'API',
+        'Frontend Development',
+        'Backend Development',
+      ],
+      'mobile_android': [
+        'Android',
+        'Kotlin',
+        'Java',
+        'Android Studio',
+        'Gradle',
+        'XML',
+        'Mobile Development',
+        'UI/UX',
+        'Material Design',
+        'REST API',
+        'Firebase',
+        'SQLite',
+        'MVVM',
+        'MVP',
+        'Jetpack Compose',
+        'Android SDK',
+      ],
+      'mobile_ios': [
+        'iOS',
+        'Swift',
+        'Objective-C',
+        'Xcode',
+        'CocoaTouch',
+        'Mobile Development',
+        'UI/UX',
+        'UIKit',
+        'SwiftUI',
+        'REST API',
+        'Firebase',
+        'Core Data',
+        'MVVM',
+        'MVP',
+        'iOS SDK',
+      ],
+      'mobile_cross_platform': [
+        'Flutter',
+        'Dart',
+        'React Native',
+        'Mobile Development',
+        'Cross-Platform',
+        'UI/UX',
+        'Firebase',
+        'REST API',
+      ],
+      'backend': [
+        'Backend',
+        'Node.js',
+        'Python',
+        'Java',
+        'Go',
+        'Ruby',
+        'PHP',
+        'REST API',
+        'GraphQL',
+        'Microservices',
+        'Database',
+        'SQL',
+        'NoSQL',
+        'MongoDB',
+        'PostgreSQL',
+        'MySQL',
+        'API Development',
+        'Server-side',
+        'Cloud Computing',
+        'AWS',
+        'Azure',
+        'GCP',
+        'Docker',
+        'Kubernetes',
+        'Server Management',
+      ],
+      'data_science': [
+        'Data Science',
+        'Machine Learning',
+        'AI',
+        'Python',
+        'R',
+        'TensorFlow',
+        'PyTorch',
+        'Scikit-learn',
+        'Pandas',
+        'NumPy',
+        'Matplotlib',
+        'Data Analysis',
+        'Data Visualization',
+        'Statistical Modeling',
+        'Big Data',
+        'SQL',
+        'Machine Learning Engineer',
+        'Data Analyst',
+      ],
+      'devops': [
+        'DevOps',
+        'CI/CD',
+        'Docker',
+        'Kubernetes',
+        'AWS',
+        'Azure',
+        'GCP',
+        'Jenkins',
+        'GitLab CI',
+        'GitHub Actions',
+        'Terraform',
+        'Ansible',
+        'Chef',
+        'Puppet',
+        'Linux',
+        'Shell Scripting',
+        'Monitoring',
+        'Logging',
+        'Infrastructure',
+        'Cloud Computing',
+      ],
+      'cloud_computing': [
+        'AWS',
+        'Azure',
+        'GCP',
+        'Cloud Computing',
+        'Cloud Architecture',
+        'Cloud Migration',
+        'Cloud Security',
+        'Serverless',
+        'Lambda',
+        'EC2',
+        'S3',
+        'VPC',
+        'CloudFormation',
+        'Terraform',
+      ],
+    };
+
+    final skills = resumeData['skills'] as List<dynamic>? ?? [];
+    final summary = resumeData['summary']?.toString() ?? '';
+    final experiences = resumeData['experiences'] as List<dynamic>? ?? [];
+    final projects = resumeData['projects'] as List<dynamic>? ?? [];
+
+    final allText = [
+      ...skills.map((s) => s.toString().toLowerCase()),
+      summary.toLowerCase(),
+      ...experiences.map((e) {
+        if (e is Map<String, dynamic>) {
+          return '${e['jobTitle']?.toString().toLowerCase() ?? ''} ${e['company']?.toString().toLowerCase() ?? ''} ${e['description']?.toString().toLowerCase() ?? ''}';
+        }
+        return '';
+      }),
+      ...projects.map((p) {
+        if (p is Map<String, dynamic>) {
+          return '${p['title']?.toString().toLowerCase() ?? ''} ${p['description']?.toString().toLowerCase() ?? ''}';
+        }
+        return '';
+      }),
+    ].join(' ');
+
+    final Map<String, int> fieldScores = {};
+    for (final field in fieldKeywords.keys) {
+      fieldScores[field] = 0;
+      for (final keyword in fieldKeywords[field]!) {
+        if (allText.contains(keyword.toLowerCase())) {
+          fieldScores[field] = (fieldScores[field] ?? 0) + 1;
+        }
+      }
+    }
+
+    // Sort fields by score in descending order
+    final sortedFields =
+        fieldScores.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Return the top 1-3 fields based on score, or all if scores are tied
+    final List<String> inferredFields = [];
+    if (sortedFields.isNotEmpty && sortedFields.first.value > 0) {
+      inferredFields.add(sortedFields.first.key);
+      if (sortedFields.length > 1 &&
+          sortedFields[1].value == sortedFields.first.value) {
+        inferredFields.add(sortedFields[1].key);
+        if (sortedFields.length > 2 &&
+            sortedFields[2].value == sortedFields.first.value) {
+          inferredFields.add(sortedFields[2].key);
+        }
+      } else if (sortedFields.length > 1 && sortedFields[1].value > 0) {
+        // Add second field if it has a score and is different
+        inferredFields.add(sortedFields[1].key);
+        if (sortedFields.length > 2 && sortedFields[2].value > 0) {
+          // Add third field if it has a score and is different
+          inferredFields.add(sortedFields[2].key);
+        }
+      }
+    }
+
+    // Filter for fields with a score greater than 0
+    return inferredFields
+        .where((field) => (fieldScores[field] ?? 0) > 0)
+        .toList();
+  }
+
+  // Refactored method to get missing ATS keywords based on inferred fields
+  List<String> getPersonalizedMissingAtsKeywords(
+    Map<String, dynamic> resumeData,
+    List<String> inferredFields,
+  ) {
+    try {
+      final skills = resumeData['skills'] as List<dynamic>? ?? [];
+      final summary = resumeData['summary']?.toString() ?? '';
+      final experiences = resumeData['experiences'] as List<dynamic>? ?? [];
+      final projects = resumeData['projects'] as List<dynamic>? ?? [];
+      final certifications =
+          resumeData['certifications'] as List<dynamic>? ?? [];
+
+      // Combine all searchable text for keyword matching
+      final allText = [
+        ...skills.map((s) => s.toString().toLowerCase()),
+        summary.toLowerCase(),
+        ...experiences.map((e) {
+          if (e is Map<String, dynamic>) {
+            return '${e['jobTitle']?.toString().toLowerCase() ?? ''} ${e['company']?.toString().toLowerCase() ?? ''} ${e['description']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+        ...projects.map((p) {
+          if (p is Map<String, dynamic>) {
+            return '${p['title']?.toString().toLowerCase() ?? ''} ${p['description']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+        ...certifications.map((c) {
+          if (c is Map<String, dynamic>) {
+            return '${c['name']?.toString().toLowerCase() ?? ''} ${c['organization']?.toString().toLowerCase() ?? ''}';
+          }
+          return '';
+        }),
+      ].join(' ');
+
+      Set<String> missingKeywords = {};
+
+      // Check keywords only from inferred fields
+      for (final field in inferredFields) {
+        if (_atsKeywords.containsKey(field)) {
+          // Use _atsKeywords which includes new fields
+          for (final keyword in _atsKeywords[field]!) {
+            if (!allText.contains(keyword.toLowerCase())) {
+              missingKeywords.add(keyword); // Add if not found in resume text
+            }
+          }
+        }
+      }
+
+      return missingKeywords.toList(); // Return as a list
+    } catch (e) {
+      debugPrint('Error in getPersonalizedMissingAtsKeywords: $e');
+      return []; // Return empty list on error
     }
   }
 }

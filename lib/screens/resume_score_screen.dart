@@ -4,7 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:resume_master/screens/resume_form_page.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
 import 'package:resume_master/screens/home.dart';
+import 'package:resume_master/screens/profile_page.dart';
 import 'package:resume_master/services/resume_scoring_service.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:resume_master/theme/page_transitions.dart';
 
 class ResumeScoreScreen extends StatefulWidget {
   const ResumeScoreScreen({super.key});
@@ -13,7 +16,8 @@ class ResumeScoreScreen extends StatefulWidget {
   State<ResumeScoreScreen> createState() => _ResumeScoreScreenState();
 }
 
-class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
+class _ResumeScoreScreenState extends State<ResumeScoreScreen>
+    with SingleTickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ResumeScoringService _scoringService = ResumeScoringService();
@@ -22,10 +26,31 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
   String? _error;
   int _currentIndex = 1; // Set to 1 for Score tab
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
     _fetchResumes();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchResumes() async {
@@ -165,9 +190,12 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
       _currentIndex = index;
     });
     if (index == 0) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context, fadePageRouteBuilder(const Home()));
     } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/profile');
+      Navigator.pushReplacement(
+        context,
+        fadePageRouteBuilder(const ProfilePage()),
+      );
     }
   }
 
@@ -176,23 +204,23 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
     final scorePercentage = (score * 100).round().clamp(0, 100);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: _getSectionColor(score),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _getBorderColor(score), width: 1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _getBorderColor(score), width: 1.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_getSectionIcon(section), color: color, size: 14),
+          Icon(_getSectionIcon(section), color: color, size: 16),
           const SizedBox(width: 4),
           Text(
             '$scorePercentage%',
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.bold,
-              fontSize: 11,
+              fontSize: 12,
             ),
           ),
         ],
@@ -223,40 +251,37 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
     }
   }
 
+  Widget _buildFeedbackItem(String text, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFeedbackList(List<String> items, {bool isStrengths = false}) {
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children:
-          items.map((item) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    isStrengths ? Icons.check_circle : Icons.info,
-                    color: isStrengths ? Colors.green : Colors.orange,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color:
-                            isStrengths
-                                ? Colors.green[700]
-                                : Colors.orange[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+          items
+              .map(
+                (item) => _buildFeedbackItem(
+                  item,
+                  isStrengths ? Icons.check_circle : Icons.info,
+                  isStrengths ? Colors.green[800]! : Colors.orange[800]!,
+                ),
+              )
+              .toList(),
     );
   }
 
@@ -397,7 +422,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(30),
           side: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
         color: Colors.white,
@@ -530,7 +555,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
       return Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(30),
           side: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
         color: Colors.white,
@@ -718,19 +743,17 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
           'Resume Scores',
           style: TextStyle(
-            color: Colors.black87,
+            fontFamily: 'CrimsonText',
             fontWeight: FontWeight.bold,
-            fontSize: 24,
-            letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         centerTitle: false,
         actions: [
@@ -746,45 +769,86 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen> {
           onRefresh: _fetchResumes,
           child:
               _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
                   : _error != null
                   ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: Colors.red[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _error!,
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 16,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red[300],
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _fetchResumes,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Try Again'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _fetchResumes,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  )
+                  : _resumes.isEmpty
+                  ? Center(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'No Resumes Found',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.8),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ResumeForm(),
+                                ),
+                              );
+                            },
+                            child: const Text('Create Resume'),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                   : SingleChildScrollView(

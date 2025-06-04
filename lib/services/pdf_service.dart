@@ -3,17 +3,22 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
+import '../models/resume.dart';
+import '../models/experience.dart'; // Import Experience model
+import '../models/education.dart'; // Import Education model
+import '../models/project.dart'; // Import Project model
+import '../models/certification.dart'; // Import Certification model
 
 class PDFService {
   // Layout constants
   static const double _pageMargin = 40.0;
-  static const double _sectionSpacing = 15.0;
-  static const double _contentSpacing = 8.0;
-  static const double _titleFontSize = 20.0;
+  static const double _sectionSpacing = 10.0;
+  static const double _contentSpacing = 5.0;
+  static const double _titleFontSize = 28.0;
   static const double _sectionTitleFontSize = 16.0;
   static const double _contentFontSize = 10.0;
   static const double _subtitleFontSize = 12.0;
-  static const double _paragraphSpacing = 12.0;
+  static const double _paragraphSpacing = 8.0;
 
   // Colors - using only black and white
   static const PdfColor _textColor = PdfColor.fromInt(
@@ -22,6 +27,8 @@ class PDFService {
   static const PdfColor _dividerColor = PdfColor.fromInt(
     0xFF666666,
   ); // Darker grey for dividers
+
+  static const PdfColor _blueColor = PdfColor.fromInt(0xFF107BDF);
 
   static Future<File> generateResumePDF(Map<String, dynamic> resumeData) async {
     final pdf = pw.Document();
@@ -41,7 +48,7 @@ class PDFService {
     final sectionStyle = pw.TextStyle(
       fontSize: _sectionTitleFontSize,
       fontWeight: pw.FontWeight.bold,
-      color: _textColor,
+      color: _blueColor,
       letterSpacing: 0.1,
     );
     final bodyStyle = pw.TextStyle(
@@ -64,7 +71,7 @@ class PDFService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Header
+              // HeaderS
               pw.Text(
                 resumeData['personalInfo']['fullName'] ?? '',
                 style: headerStyle,
@@ -78,12 +85,6 @@ class PDFService {
                   if (resumeData['personalInfo']['linkedin']?.isNotEmpty ??
                       false)
                     'LinkedIn: ${resumeData['personalInfo']['linkedin']}',
-                  if (resumeData['personalInfo']['nationality']?.isNotEmpty ??
-                      false)
-                    'Nationality: ${resumeData['personalInfo']['nationality']}',
-                  if (resumeData['personalInfo']['dateOfBirth']?.isNotEmpty ??
-                      false)
-                    'DOB: ${resumeData['personalInfo']['dateOfBirth']}',
                 ].where((item) => item.isNotEmpty).join(' | '),
                 style: bodyStyle,
               ),
@@ -111,9 +112,17 @@ class PDFService {
                     children: [
                       pw.Text(exp['jobTitle'] ?? '', style: subheaderStyle),
                       pw.SizedBox(height: 4),
-                      pw.Text(
-                        "${exp['company'] ?? ''} | ${exp['duration'] ?? ''}",
-                        style: bodyStyle,
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Expanded(
+                            child: pw.Text(
+                              exp['company'] ?? '',
+                              style: bodyStyle,
+                            ),
+                          ),
+                          pw.Text(exp['duration'] ?? '', style: bodyStyle),
+                        ],
                       ),
                       if (exp['description'] != null &&
                           exp['description'].isNotEmpty) ...[
@@ -139,9 +148,17 @@ class PDFService {
                     children: [
                       pw.Text(edu['degree'] ?? '', style: subheaderStyle),
                       pw.SizedBox(height: 4),
-                      pw.Text(
-                        "${edu['institution'] ?? ''} | ${edu['year'] ?? ''}",
-                        style: bodyStyle,
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Expanded(
+                            child: pw.Text(
+                              edu['institution'] ?? '',
+                              style: bodyStyle,
+                            ),
+                          ),
+                          pw.Text(edu['year'] ?? '', style: bodyStyle),
+                        ],
                       ),
                       if (edu['description']?.isNotEmpty ?? false) ...[
                         pw.SizedBox(height: 8),
@@ -160,7 +177,7 @@ class PDFService {
                 pw.SizedBox(height: _sectionSpacing),
                 pw.Text('Skills', style: sectionStyle),
                 pw.SizedBox(height: _contentSpacing),
-                pw.Text(resumeData['skills'].join(', '), style: bodyStyle),
+                _buildSkillsSection(resumeData['skills']),
                 pw.SizedBox(height: _paragraphSpacing),
                 sectionDivider(),
               ],
@@ -170,7 +187,7 @@ class PDFService {
                 pw.SizedBox(height: _sectionSpacing),
                 pw.Text('Languages', style: sectionStyle),
                 pw.SizedBox(height: _contentSpacing),
-                pw.Text(resumeData['languages'].join(', '), style: bodyStyle),
+                _buildLanguagesSection(resumeData['languages']),
                 pw.SizedBox(height: _paragraphSpacing),
                 sectionDivider(),
               ],
@@ -352,6 +369,142 @@ class PDFService {
         .toList();
   }
 
+  static Future<Uint8List> generateResumePDFModel(Resume resume) async {
+    final pdf = pw.Document();
+
+    // Styles
+    final headerStyle = pw.TextStyle(
+      fontSize: _titleFontSize,
+      fontWeight: pw.FontWeight.bold,
+      color: _textColor,
+      letterSpacing: 0.1,
+    );
+    final bodyStyle = pw.TextStyle(
+      fontSize: _contentFontSize,
+      color: _textColor,
+      lineSpacing: 1.1,
+      letterSpacing: 0.05,
+    );
+
+    // Section Divider Widget
+    pw.Widget sectionDivider() => pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 8),
+      child: pw.Divider(thickness: 1.0, color: _dividerColor, height: 1),
+    );
+
+    final personalInfo = resume.personalInfo;
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(_pageMargin),
+        build: (context) {
+          final sections = <pw.Widget>[];
+
+          // Header section with contact info
+          sections.add(
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  personalInfo['fullName']?.toString().trim() ?? '',
+                  style: headerStyle,
+                ),
+                pw.SizedBox(height: _contentSpacing),
+                pw.Text(
+                  [
+                    personalInfo['email']?.toString().trim() ?? '',
+                    personalInfo['phone']?.toString().trim() ?? '',
+                    personalInfo['address']?.toString().trim() ?? '',
+                    if (personalInfo['linkedin']
+                            ?.toString()
+                            .trim()
+                            .isNotEmpty ??
+                        false)
+                      'LinkedIn: ${personalInfo['linkedin'].toString().trim()}',
+                  ].where((item) => item.isNotEmpty).join(' | '),
+                  style: bodyStyle,
+                ),
+              ],
+            ),
+          );
+
+          // Add sections dynamically with dividers and spacing
+          void addSection({
+            required String title,
+            required bool shouldAdd,
+            required pw.Widget content,
+          }) {
+            if (shouldAdd) {
+              // Add divider only if there are previous sections
+              if (sections.isNotEmpty) {
+                sections.add(pw.SizedBox(height: _sectionSpacing));
+                sections.add(sectionDivider());
+              }
+              sections.add(pw.SizedBox(height: _sectionSpacing));
+              sections.add(_buildSectionTitle(title));
+              sections.add(pw.SizedBox(height: _contentSpacing));
+              sections.add(content);
+            }
+          }
+
+          addSection(
+            title: 'Summary',
+            shouldAdd: resume.summary.isNotEmpty,
+            content: _buildSummarySection(resume.summary),
+          );
+
+          addSection(
+            title: 'Objective',
+            shouldAdd: resume.objective.isNotEmpty,
+            content: _buildSummarySection(resume.objective),
+          );
+
+          addSection(
+            title: 'Work Experience',
+            shouldAdd: resume.experiences.isNotEmpty,
+            content: _buildExperienceSection(resume.experiences),
+          );
+
+          addSection(
+            title: 'Education',
+            shouldAdd: resume.education.isNotEmpty,
+            content: _buildEducationSection(resume.education),
+          );
+
+          addSection(
+            title: 'Skills',
+            shouldAdd: resume.skills.isNotEmpty,
+            content: _buildSkillsSection(resume.skills),
+          );
+
+          addSection(
+            title: 'Languages',
+            shouldAdd: resume.languages.isNotEmpty,
+            content: _buildLanguagesSection(resume.languages),
+          );
+
+          addSection(
+            title: 'Projects',
+            shouldAdd: resume.projects.isNotEmpty,
+            content: _buildProjectsSection(resume.projects),
+          );
+
+          addSection(
+            title: 'Certifications',
+            shouldAdd: resume.certifications.isNotEmpty,
+            content: _buildCertificationsSection(resume.certifications),
+          );
+
+          return sections;
+        },
+      ),
+    );
+    return pdf.save();
+  }
+
+  // Helper methods for building sections
+
   static pw.Widget _buildHeaderSection(Map<String, dynamic> personalInfo) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -365,7 +518,7 @@ class PDFService {
             letterSpacing: 0.1,
           ),
         ),
-        pw.SizedBox(height: 16),
+        pw.SizedBox(height: _contentSpacing),
         pw.Text(
           [
             personalInfo['email']?.toString().trim() ?? '',
@@ -373,12 +526,6 @@ class PDFService {
             personalInfo['address']?.toString().trim() ?? '',
             if (personalInfo['linkedin']?.toString().trim().isNotEmpty ?? false)
               'LinkedIn: ${personalInfo['linkedin'].toString().trim()}',
-            if (personalInfo['nationality']?.toString().trim().isNotEmpty ??
-                false)
-              'Nationality: ${personalInfo['nationality'].toString().trim()}',
-            if (personalInfo['dateOfBirth']?.toString().trim().isNotEmpty ??
-                false)
-              'DOB: ${personalInfo['dateOfBirth'].toString().trim()}',
           ].where((item) => item.isNotEmpty).join(' | '),
           style: pw.TextStyle(fontSize: _contentFontSize),
         ),
@@ -398,22 +545,87 @@ class PDFService {
     );
   }
 
-  static pw.Widget _buildExperienceSection(
-    List<Map<String, String>> experiences,
-  ) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children:
-          experiences.map((exp) {
-            return pw.Column(
+  static pw.Widget _buildExperienceSection(List<Experience> experiences) {
+    List<pw.Widget> experienceRows = [];
+    for (int i = 0; i < experiences.length; i += 2) {
+      List<pw.Widget> rowChildren = [];
+
+      // First item in the row
+      rowChildren.add(
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Arrange Job Title and Duration in a Row
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      experiences[i].jobTitle, // Job Title on the left
+                      style: pw.TextStyle(
+                        fontSize: _subtitleFontSize,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _textColor,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    experiences[i].duration, // Duration on the right
+                    style: pw.TextStyle(
+                      fontSize: _contentFontSize,
+                      color: _textColor,
+                      letterSpacing: 0.05,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(
+                height: 4,
+              ), // Spacing between title/duration and company
+              // Company below the title/duration row
+              pw.Text(
+                experiences[i].company,
+                style: pw.TextStyle(
+                  fontSize: _contentFontSize,
+                  color: _textColor,
+                  letterSpacing: 0.05,
+                ),
+              ),
+              if (experiences[i].description.isNotEmpty) ...[
+                // Use isNotEmpty
+                pw.SizedBox(height: 8), // Spacing before description
+                pw.Text(
+                  experiences[i].description,
+                  style: pw.TextStyle(
+                    fontSize: _contentFontSize,
+                    color: _textColor,
+                    lineSpacing: 1.1,
+                    letterSpacing: 0.05,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+
+      // Second item in the row (if exists)
+      if (i + 1 < experiences.length) {
+        rowChildren.add(pw.SizedBox(width: 16)); // Spacing between columns
+        rowChildren.add(
+          pw.Expanded(
+            child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // Arrange Job Title and Duration in a Row
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Expanded(
                       child: pw.Text(
-                        exp['jobTitle'] ?? '',
+                        experiences[i + 1].jobTitle, // Job Title on the left
                         style: pw.TextStyle(
                           fontSize: _subtitleFontSize,
                           fontWeight: pw.FontWeight.bold,
@@ -423,7 +635,7 @@ class PDFService {
                       ),
                     ),
                     pw.Text(
-                      exp['duration'] ?? '',
+                      experiences[i + 1].duration, // Duration on the right
                       style: pw.TextStyle(
                         fontSize: _contentFontSize,
                         color: _textColor,
@@ -432,19 +644,23 @@ class PDFService {
                     ),
                   ],
                 ),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(
+                  height: 4,
+                ), // Spacing between title/duration and company
+                // Company below the title/duration row
                 pw.Text(
-                  exp['company'] ?? '',
+                  experiences[i + 1].company,
                   style: pw.TextStyle(
                     fontSize: _contentFontSize,
                     color: _textColor,
                     letterSpacing: 0.05,
                   ),
                 ),
-                if (exp['description']?.isNotEmpty == true) ...[
-                  pw.SizedBox(height: 12),
+                if (experiences[i + 1].description.isNotEmpty) ...[
+                  // Use isNotEmpty
+                  pw.SizedBox(height: 8), // Spacing before description
                   pw.Text(
-                    exp['description'] ?? '',
+                    experiences[i + 1].description,
                     style: pw.TextStyle(
                       fontSize: _contentFontSize,
                       color: _textColor,
@@ -453,27 +669,115 @@ class PDFService {
                     ),
                   ),
                 ],
-                pw.SizedBox(height: 16),
               ],
-            );
-          }).toList(),
+            ),
+          ),
+        );
+      } else {
+        // Add an empty Expanded to balance the row if there's only one item
+        rowChildren.add(pw.Expanded(child: pw.Container()));
+      }
+
+      experienceRows.add(
+        pw.Padding(
+          padding:
+              i == 0
+                  ? pw.EdgeInsets.zero
+                  : const pw.EdgeInsets.only(
+                    top: _paragraphSpacing,
+                  ), // Add spacing between rows of entries
+          child: pw.Row(children: rowChildren),
+        ),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: experienceRows,
     );
   }
 
-  static pw.Widget _buildEducationSection(List<Map<String, String>> education) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children:
-          education.map((edu) {
-            return pw.Column(
+  static pw.Widget _buildEducationSection(List<Education> education) {
+    List<pw.Widget> educationRows = [];
+    for (int i = 0; i < education.length; i += 2) {
+      List<pw.Widget> rowChildren = [];
+
+      // First item in the row
+      rowChildren.add(
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Arrange Degree and Year in a Row
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      education[i].degree, // Degree on the left
+                      style: pw.TextStyle(
+                        fontSize: _subtitleFontSize,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _textColor,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    education[i].year, // Year on the right
+                    style: pw.TextStyle(
+                      fontSize: _contentFontSize,
+                      color: _textColor,
+                      letterSpacing: 0.05,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(
+                height: 4,
+              ), // Spacing between degree/year and institution
+              // Institution below the degree/year row
+              pw.Text(
+                education[i].institution,
+                style: pw.TextStyle(
+                  fontSize: _contentFontSize,
+                  color: _textColor,
+                  letterSpacing: 0.05,
+                ),
+              ),
+              if (education[i].description.isNotEmpty) ...[
+                // Use isNotEmpty
+                pw.SizedBox(height: 8), // Spacing before description
+                pw.Text(
+                  education[i].description,
+                  style: pw.TextStyle(
+                    fontSize: _contentFontSize,
+                    color: _textColor,
+                    lineSpacing: 1.1,
+                    letterSpacing: 0.05,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+
+      // Second item in the row (if exists)
+      if (i + 1 < education.length) {
+        rowChildren.add(pw.SizedBox(width: 16)); // Spacing between columns
+        rowChildren.add(
+          pw.Expanded(
+            child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // Arrange Degree and Year in a Row
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Expanded(
                       child: pw.Text(
-                        edu['degree'] ?? '',
+                        education[i + 1].degree, // Degree on the left
                         style: pw.TextStyle(
                           fontSize: _subtitleFontSize,
                           fontWeight: pw.FontWeight.bold,
@@ -483,7 +787,7 @@ class PDFService {
                       ),
                     ),
                     pw.Text(
-                      edu['year'] ?? '',
+                      education[i + 1].year, // Year on the right
                       style: pw.TextStyle(
                         fontSize: _contentFontSize,
                         color: _textColor,
@@ -492,19 +796,23 @@ class PDFService {
                     ),
                   ],
                 ),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(
+                  height: 4,
+                ), // Spacing between degree/year and institution
+                // Institution below the degree/year row
                 pw.Text(
-                  edu['institution'] ?? '',
+                  education[i + 1].institution,
                   style: pw.TextStyle(
                     fontSize: _contentFontSize,
                     color: _textColor,
                     letterSpacing: 0.05,
                   ),
                 ),
-                if (edu['description']?.isNotEmpty == true) ...[
-                  pw.SizedBox(height: 12),
+                if (education[i + 1].description.isNotEmpty) ...[
+                  // Use isNotEmpty
+                  pw.SizedBox(height: 8), // Spacing before description
                   pw.Text(
-                    edu['description'] ?? '',
+                    education[i + 1].description,
                     style: pw.TextStyle(
                       fontSize: _contentFontSize,
                       color: _textColor,
@@ -513,10 +821,31 @@ class PDFService {
                     ),
                   ),
                 ],
-                pw.SizedBox(height: 16),
               ],
-            );
-          }).toList(),
+            ),
+          ),
+        );
+      } else {
+        // Add an empty Expanded to balance the row if there's only one item
+        rowChildren.add(pw.Expanded(child: pw.Container()));
+      }
+
+      educationRows.add(
+        pw.Padding(
+          padding:
+              i == 0
+                  ? pw.EdgeInsets.zero
+                  : const pw.EdgeInsets.only(
+                    top: _paragraphSpacing,
+                  ), // Add spacing between rows of entries
+          child: pw.Row(children: rowChildren),
+        ),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: educationRows,
     );
   }
 
@@ -531,92 +860,6 @@ class PDFService {
     );
   }
 
-  static pw.Widget _buildProjectsSection(List<Map<String, String>> projects) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children:
-          projects.map((proj) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  proj['title'] ?? '',
-                  style: pw.TextStyle(
-                    fontSize: _subtitleFontSize,
-                    fontWeight: pw.FontWeight.bold,
-                    color: _textColor,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-                if (proj['description']?.isNotEmpty == true) ...[
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    proj['description'] ?? '',
-                    style: pw.TextStyle(
-                      fontSize: _contentFontSize,
-                      color: _textColor,
-                      lineSpacing: 1.1,
-                      letterSpacing: 0.05,
-                    ),
-                  ),
-                ],
-                pw.SizedBox(height: 16),
-              ],
-            );
-          }).toList(),
-    );
-  }
-
-  static pw.Widget _buildCertificationsSection(
-    List<Map<String, String>> certifications,
-  ) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children:
-          certifications.map((cert) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Expanded(
-                      child: pw.Text(
-                        cert['name'] ?? '',
-                        style: pw.TextStyle(
-                          fontSize: _subtitleFontSize,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _textColor,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                    ),
-                    pw.Text(
-                      cert['year'] ?? '',
-                      style: pw.TextStyle(
-                        fontSize: _contentFontSize,
-                        color: _textColor,
-                        letterSpacing: 0.05,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  cert['organization'] ?? '',
-                  style: pw.TextStyle(
-                    fontSize: _contentFontSize,
-                    color: _textColor,
-                    letterSpacing: 0.05,
-                  ),
-                ),
-                pw.SizedBox(height: 16),
-              ],
-            );
-          }).toList(),
-    );
-  }
-
   static pw.Widget _buildLanguagesSection(List<String> languages) {
     return pw.Text(
       languages.join(', '),
@@ -628,134 +871,187 @@ class PDFService {
     );
   }
 
+  static pw.Widget _buildProjectsSection(List<Project> projects) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        ...projects.asMap().entries.map((entry) {
+          final index = entry.key;
+          final proj = entry.value;
+          final isLast = index == projects.length - 1;
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                proj.title,
+                style: pw.TextStyle(
+                  fontSize: _subtitleFontSize,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _textColor,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              if (proj.description.isNotEmpty) ...[
+                // Use isNotEmpty
+                pw.SizedBox(height: 8), // Spacing before description
+                pw.Text(
+                  proj.description,
+                  style: pw.TextStyle(
+                    fontSize: _contentFontSize,
+                    color: _textColor,
+                    lineSpacing: 1.1,
+                    letterSpacing: 0.05,
+                  ),
+                ),
+              ],
+              if (!isLast)
+                pw.SizedBox(
+                  height: _paragraphSpacing,
+                ), // Spacing after item unless it's the last one
+            ],
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  static pw.Widget _buildCertificationsSection(
+    List<Certification> certifications,
+  ) {
+    List<pw.Widget> certificationRows = [];
+    for (int i = 0; i < certifications.length; i += 2) {
+      List<pw.Widget> rowChildren = [];
+
+      // First item in the row
+      rowChildren.add(
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Arrange Name and Year in a Row
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      certifications[i].name, // Name on the left
+                      style: pw.TextStyle(
+                        fontSize: _subtitleFontSize,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _textColor,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    certifications[i].year, // Year on the right
+                    style: pw.TextStyle(
+                      fontSize: _contentFontSize,
+                      color: _textColor,
+                      letterSpacing: 0.05,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(
+                height: 4,
+              ), // Spacing between name/year and organization
+              // Organization below the name/year row
+              pw.Text(
+                certifications[i].organization,
+                style: pw.TextStyle(
+                  fontSize: _contentFontSize,
+                  color: _textColor,
+                  letterSpacing: 0.05,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Second item in the row (if exists)
+      if (i + 1 < certifications.length) {
+        rowChildren.add(pw.SizedBox(width: 16)); // Spacing between columns
+        rowChildren.add(
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Arrange Name and Year in a Row
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(
+                      child: pw.Text(
+                        certifications[i + 1].name, // Name on the left
+                        style: pw.TextStyle(
+                          fontSize: _subtitleFontSize,
+                          fontWeight: pw.FontWeight.bold,
+                          color: _textColor,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+                    pw.Text(
+                      certifications[i + 1].year, // Year on the right
+                      style: pw.TextStyle(
+                        fontSize: _contentFontSize,
+                        color: _textColor,
+                        letterSpacing: 0.05,
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(
+                  height: 4,
+                ), // Spacing between name/year and organization
+                // Organization below the name/year row
+                pw.Text(
+                  certifications[i + 1].organization,
+                  style: pw.TextStyle(
+                    fontSize: _contentFontSize,
+                    color: _textColor,
+                    letterSpacing: 0.05,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // Add an empty Expanded to balance the row if there's only one item
+        rowChildren.add(pw.Expanded(child: pw.Container()));
+      }
+
+      certificationRows.add(
+        pw.Padding(
+          padding:
+              i == 0
+                  ? pw.EdgeInsets.zero
+                  : const pw.EdgeInsets.only(
+                    top: _paragraphSpacing,
+                  ), // Add spacing between rows of entries
+          child: pw.Row(children: rowChildren),
+        ),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: certificationRows,
+    );
+  }
+
   static pw.Widget _buildSectionTitle(String title) {
     return pw.Text(
       title.toUpperCase(),
       style: pw.TextStyle(
         fontSize: _sectionTitleFontSize,
         fontWeight: pw.FontWeight.bold,
-        color: _textColor,
+        color: _blueColor,
         letterSpacing: 0.5,
       ),
     );
-  }
-
-  static Future<Uint8List> generateResumePDFBytes(
-    Map<String, dynamic> resumeData,
-  ) async {
-    try {
-      debugPrint('Starting PDF generation with data: $resumeData');
-
-      // Validate required fields
-      if (resumeData['personalInfo'] == null) {
-        throw Exception('Personal information is required');
-      }
-
-      final personalInfo = resumeData['personalInfo'] as Map<String, dynamic>;
-      debugPrint('Personal info: $personalInfo');
-
-      if (personalInfo['fullName'] == null ||
-          personalInfo['fullName'].toString().trim().isEmpty) {
-        throw Exception('Full name is required');
-      }
-
-      // Create PDF document
-      final pdf = pw.Document();
-
-      // Add pages
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(_pageMargin),
-          build: (context) {
-            final sections = <pw.Widget>[];
-
-            try {
-              // Header section with contact info
-              sections.add(_buildHeaderSection(personalInfo));
-              sections.add(pw.SizedBox(height: _sectionSpacing));
-
-              // Summary
-              final summary = resumeData['summary']?.toString().trim();
-              if (summary != null && summary.isNotEmpty) {
-                sections.add(_buildSectionTitle('Summary'));
-                sections.add(_buildSummarySection(summary));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Work Experience
-              final experiences = _validateAndSanitizeExperiences(
-                resumeData['experiences'],
-              );
-              if (experiences.isNotEmpty) {
-                sections.add(_buildSectionTitle('Experience'));
-                sections.add(_buildExperienceSection(experiences));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Education
-              final education = _validateAndSanitizeEducation(
-                resumeData['education'],
-              );
-              if (education.isNotEmpty) {
-                sections.add(_buildSectionTitle('Education'));
-                sections.add(_buildEducationSection(education));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Skills
-              final skills = _validateAndSanitizeSkills(resumeData['skills']);
-              if (skills.isNotEmpty) {
-                sections.add(_buildSectionTitle('Technical Skills'));
-                sections.add(_buildSkillsSection(skills));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Projects
-              final projects = _validateAndSanitizeProjects(
-                resumeData['projects'],
-              );
-              if (projects.isNotEmpty) {
-                sections.add(_buildSectionTitle('Projects'));
-                sections.add(_buildProjectsSection(projects));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Certifications
-              final certifications = _validateAndSanitizeCertifications(
-                resumeData['certifications'],
-              );
-              if (certifications.isNotEmpty) {
-                sections.add(_buildSectionTitle('Certifications'));
-                sections.add(_buildCertificationsSection(certifications));
-                sections.add(pw.SizedBox(height: _sectionSpacing));
-              }
-
-              // Languages
-              final languages = _validateAndSanitizeLanguages(
-                resumeData['languages'],
-              );
-              if (languages.isNotEmpty) {
-                sections.add(_buildSectionTitle('Languages'));
-                sections.add(_buildLanguagesSection(languages));
-              }
-
-              return sections;
-            } catch (e, stackTrace) {
-              debugPrint('Error building PDF sections: $e');
-              debugPrint('Stack trace: $stackTrace');
-              rethrow;
-            }
-          },
-        ),
-      );
-
-      // Return PDF bytes
-      return await pdf.save();
-    } catch (e, stackTrace) {
-      debugPrint('Error generating PDF: $e');
-      debugPrint('Stack trace: $stackTrace');
-      throw Exception('Failed to generate PDF: ${e.toString()}');
-    }
   }
 }

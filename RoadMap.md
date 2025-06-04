@@ -25,7 +25,7 @@ Store user profiles in Firebase Realtime Database under /users/{uid}.
 📝 Phase 2: Resume Data Entry Module
 Multi-Step Form UI:
 
-Sections: Personal Info, Education, Work Experience, Projects, Skills, Certifications, Summary.
+Sections: Personal Info, Education, Work Experience, Projects, Skills, Certifications, Summary, Hobbies & Interests.
 
 Data Storage:
 
@@ -40,7 +40,17 @@ NLP Parsing & ATS Score Engine:
 
 Analyze keyword frequency, format compliance, and skill matching.
 
-Return ATS score (0–100), feedback, and skill matches/gaps.
+The scoring logic is implemented in `lib/services/resume_scoring_service.dart`.
+
+It calculates a total score (0-100) based on weighted scores of individual sections.
+
+**Section Scoring:** Each section (Personal Info, Summary, Education, Experience, Skills, Projects, Certifications) is evaluated for completeness and content details based on predefined requirements (`_sectionRequirements`).
+
+**ATS Compatibility:** A separate score is calculated based on the presence and relevance of industry-specific keywords found within the resume text, compared against predefined keyword lists (`_atsKeywords`).
+
+**Total Score:** The overall score is a weighted average of all section scores, including ATS compatibility (`_sectionWeights`).
+
+**Feedback:** Provides detailed suggestions and highlights strengths for each section and overall, based on the scores.
 
 Backend Endpoint:
 
@@ -56,6 +66,8 @@ PDF Generation:
 Use Flutter packages like pdf and printing to generate resumes in-app.
 
 Provide templates and allow users to preview and download PDFs.
+
+The PDF generation logic is in `lib/services/pdf_service.dart`.
 
 💼 Phase 5: Job Recommendations
 Job Matching Logic:
@@ -137,4 +149,3 @@ Deployment:
 Flutter Web: Firebase Hosting or Netlify.
 
 Android/iOS: Deploy to Play Store & App Store.
-
