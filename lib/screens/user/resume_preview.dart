@@ -5,11 +5,11 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'dart:typed_data';
-import '../models/resume.dart';
-import '../models/experience.dart';
-import '../models/education.dart';
-import '../models/project.dart';
-import '../models/certification.dart';
+import 'package:resume_master/models/resume.dart';
+import 'package:resume_master/models/experience.dart';
+import 'package:resume_master/models/education.dart';
+import 'package:resume_master/models/project.dart';
+import 'package:resume_master/models/certification.dart';
 import 'dart:async';
 
 class ResumePreview extends StatefulWidget {
@@ -411,9 +411,31 @@ class _ResumePreviewState extends State<ResumePreview> {
                   if (resume.hobbies.isNotEmpty)
                     _buildSection(
                       title: 'Hobbies & Interests',
-                      child: Text(
-                        resume.hobbies,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            resume.hobbies
+                                .split(',')
+                                .map((hobby) => hobby.trim())
+                                .where((hobby) => hobby.isNotEmpty)
+                                .map(
+                                  (hobby) => Chip(
+                                    label: Text(
+                                      hobby,
+                                      style: TextStyle(
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
+                                      ),
+                                    ),
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.secondary.withOpacity(0.1),
+                                  ),
+                                )
+                                .toList(),
                       ),
                     ),
                 ],

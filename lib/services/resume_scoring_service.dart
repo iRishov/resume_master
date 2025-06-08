@@ -1778,4 +1778,79 @@ class ResumeScoringService {
       return []; // Return empty list on error
     }
   }
+
+  // Calculate average score for a list of resumes
+  Map<String, dynamic> calculateAverageScore(List<Map<String, dynamic>> resumes) {
+    double totalScore = 0;
+    double highestScore = 0;
+    String highestBadge = 'Resume Starter';
+    IconData highestBadgeIcon = Icons.flag;
+    Color highestBadgeColor = const Color(0xFFD84315);
+
+    for (var resume in resumes) {
+      try {
+        final scoreResult = calculateScore(resume);
+        final sectionScores = scoreResult['sectionScores'] as Map<String, dynamic>;
+
+        // Calculate average of section scores
+        double sectionAverage = 0.0;
+        int sectionCount = 0;
+        for (final entry in sectionScores.entries) {
+          if (entry.key != 'atsCompatibility') {
+            sectionAverage += entry.value as double;
+            sectionCount++;
+          }
+        }
+        final averageScore = sectionCount > 0 ? (sectionAverage / sectionCount) * 100 : 0.0;
+        totalScore += averageScore;
+
+        // Track highest score and badge
+        if (averageScore > highestScore) {
+          highestScore = averageScore;
+          if (averageScore >= 90) {
+            highestBadge = 'Resume Master';
+            highestBadgeIcon = Icons.workspace_premium;
+            highestBadgeColor = const Color(0xFF1B5E20);
+          } else if (averageScore >= 80) {
+            highestBadge = 'Resume Expert';
+            highestBadgeIcon = Icons.star;
+            highestBadgeColor = const Color(0xFF2E7D32);
+          } else if (averageScore >= 70) {
+            highestBadge = 'Resume Pro';
+            highestBadgeIcon = Icons.emoji_events;
+            highestBadgeColor = const Color(0xFF43A047);
+          } else if (averageScore >= 60) {
+            highestBadge = 'Resume Builder';
+            highestBadgeIcon = Icons.construction;
+            highestBadgeColor = const Color(0xFFF57F17);
+          } else if (averageScore >= 50) {
+            highestBadge = 'Resume Learner';
+            highestBadgeIcon = Icons.school;
+            highestBadgeColor = const Color(0xFFE65100);
+          } else if (averageScore >= 40) {
+            highestBadge = 'Resume Starter';
+            highestBadgeIcon = Icons.flag;
+            highestBadgeColor = const Color(0xFFD84315);
+          } else {
+            highestBadge = 'Needs Work';
+            highestBadgeIcon = Icons.warning;
+            highestBadgeColor = const Color(0xFFB71C1C);
+          }
+        }
+      } catch (e) {
+        debugPrint('Error calculating score for resume in stats: $e');
+        continue;
+      }
+    }
+
+    final averageScore = resumes.isNotEmpty ? totalScore / resumes.length : 0.0;
+
+    return {
+      'averageScore': averageScore,
+      'highestScore': highestScore,
+      'highestBadge': highestBadge,
+      'highestBadgeIcon': highestBadgeIcon,
+      'highestBadgeColor': highestBadgeColor,
+    };
+  }
 }

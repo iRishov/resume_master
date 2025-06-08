@@ -2,12 +2,13 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:resume_master/screens/signup.dart';
-import 'package:resume_master/screens/forgot_password.dart';
-import 'package:resume_master/screens/home.dart';
+import 'package:resume_master/screens/user/signup.dart';
+import 'package:resume_master/screens/user/forgot_password.dart';
+import 'package:resume_master/screens/user/home.dart';
 import 'package:resume_master/services/auth_service.dart';
 import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/theme/app_theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -21,9 +22,10 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = false;
 
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
   bool _isGoogleLoading = false;
 
   late AnimationController _animationController;
@@ -49,6 +51,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     );
 
     _animationController.forward();
+    _checkAuth();
   }
 
   @override
@@ -79,6 +82,31 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     );
   }
 
+  Future<void> _checkAuth() async {
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        // Check user role
+        final userDoc =
+            await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final role = userDoc.data()?['role'] as String?;
+          if (role == 'recruiter') {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/recruiter-home');
+            }
+          } else {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/home');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {});
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -103,23 +131,24 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _handleGoogleSignIn() async {
-    if (_isGoogleLoading) return;
-    setState(() => _isGoogleLoading = true);
-
+    setState(() => _isLoading = true);
     try {
       final user = await _authService.signInWithGoogle();
       if (user != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const Home()),
-        );
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
-      if (mounted) {
-        _showMessage('Google sign in failed: ${e.toString()}', false);
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isGoogleLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

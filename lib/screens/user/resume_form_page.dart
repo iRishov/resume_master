@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:resume_master/screens/home.dart';
+import 'package:resume_master/screens/user/home.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:resume_master/widgets/form_fields.dart';
-import '../models/experience.dart';
-import '../models/education.dart';
-import '../widgets/experience_card.dart';
-import '../widgets/education_card.dart';
-import '../models/project.dart';
-import '../models/certification.dart';
-import '../widgets/project_card.dart';
-import '../widgets/certification_card.dart';
-import '../models/resume.dart';
+import 'package:resume_master/models/experience.dart';
+import 'package:resume_master/models/education.dart';
+import 'package:resume_master/widgets/experience_card.dart';
+import 'package:resume_master/widgets/education_card.dart';
+import 'package:resume_master/models/project.dart';
+import 'package:resume_master/models/certification.dart';
+import 'package:resume_master/widgets/project_card.dart';
+import 'package:resume_master/widgets/certification_card.dart';
+import 'package:resume_master/models/resume.dart';
 import 'package:resume_master/widgets/skill_widgets.dart'; // Import the new skill widgets
 import 'dart:async'; // Import dart:async for Timer
+import 'package:resume_master/services/firebase_service.dart';
 
 class ResumeForm extends StatefulWidget {
   final Map<String, dynamic>? resumeData;
@@ -112,12 +113,18 @@ class _ResumeFormState extends State<ResumeForm>
         setState(() => _isLoading = false);
         return;
       }
+
+      // Get user profile data
+      final userData = await FirebaseService().getUserData(user.uid);
+      final userName = userData.data()?['name'] ?? user.displayName ?? '';
+      final userPhone = userData.data()?['phone'] ?? '';
+
       if (widget.resumeData == null) {
         // New resume
         _resume = null;
-        _fullNameController.text = user.displayName ?? '';
+        _fullNameController.text = userName;
         _emailController.text = user.email ?? '';
-        _phoneController.text = '';
+        _phoneController.text = userPhone;
         _addressController.text = '';
         _dobController.text = '';
         _nationalityController.text = '';
@@ -135,46 +142,60 @@ class _ResumeFormState extends State<ResumeForm>
         _updateProgress(); // Calculate initial progress
         return;
       }
+
       // Editing existing resume
       // Get the document ID from the map and pass it to fromMap
       final resumeId = widget.resumeData!['id'] as String? ?? '';
       _resume = Resume.fromMap(widget.resumeData!, id: resumeId);
       final pi = _resume!.personalInfo;
-      _fullNameController.text = pi['fullName'] ?? '';
-      _emailController.text = pi['email'] ?? '';
-      _phoneController.text = pi['phone'] ?? '';
+
+      // Only auto-fill if fields are empty
+      _fullNameController.text =
+          (pi['fullName'] as String?)?.isEmpty ?? true
+              ? userName
+              : pi['fullName'] ?? '';
+      _emailController.text =
+          (pi['email'] as String?)?.isEmpty ?? true
+              ? user.email ?? ''
+              : pi['email'] ?? '';
+      _phoneController.text =
+          (pi['phone'] as String?)?.isEmpty ?? true
+              ? userPhone
+              : pi['phone'] ?? '';
       _addressController.text = pi['address'] ?? '';
       _dobController.text = pi['dateOfBirth'] ?? '';
       _nationalityController.text = pi['nationality'] ?? '';
       _selectedGender = pi['gender'];
-      _linkedinController.text = pi['linkedin'] ?? '';
       _objectiveController.text = _resume!.objective;
       _summaryController.text = _resume!.summary;
       _hobbiesController.text = _resume!.hobbies;
+
+      // Update lists using clear and addAll
       _selectedSkills.clear();
       _selectedSkills.addAll(_resume!.skills);
       _selectedLanguages.clear();
       _selectedLanguages.addAll(_resume!.languages);
-      _experiences
-        ..clear()
-        ..addAll(_resume!.experiences);
-      _education
-        ..clear()
-        ..addAll(_resume!.education);
-      _projects
-        ..clear()
-        ..addAll(_resume!.projects);
-      _certifications
-        ..clear()
-        ..addAll(_resume!.certifications);
+      _experiences.clear();
+      _experiences.addAll(_resume!.experiences);
+      _education.clear();
+      _education.addAll(_resume!.education);
+      _projects.clear();
+      _projects.addAll(_resume!.projects);
+      _certifications.clear();
+      _certifications.addAll(_resume!.certifications);
+
       setState(() => _isLoading = false);
-      _updateProgress();
+      _updateProgress(); // Calculate initial progress
     } catch (e) {
-      debugPrint('Error loading resume: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading resume: ${e.toString()}')),
-      );
+      debugPrint('Error loading resume data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading resume: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       setState(() => _isLoading = false);
     }
   }
@@ -374,66 +395,74 @@ class _ResumeFormState extends State<ResumeForm>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _resume == null ? 'Create Resume' : 'Edit Resume',
-          style: const TextStyle(
-            fontFamily: 'CrimsonText',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _isLoading ? null : _handleFormSubmit,
-            tooltip: 'Save Resume',
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              _buildStepIndicator(),
-              LinearProgressIndicator(
-                value: _overallProgress,
-                backgroundColor: Colors.grey[300],
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentStep = index;
-                    });
-                  },
-                  children: [
-                    _buildPersonalInfoStep(),
-                    _buildSummaryStep(),
-                    _buildExperienceStep(),
-                    _buildEducationStep(),
-                    _buildSkillsStep(),
-                    _buildProjectsStep(),
-                    _buildCertificationsStep(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(child: CircularProgressIndicator()),
+    return GestureDetector(
+      onTap: () {
+        // Dismiss keyboard when tapping outside
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _resume == null ? 'Create Resume' : 'Edit Resume',
+            style: const TextStyle(
+              fontFamily: 'CrimsonText',
+              fontWeight: FontWeight.bold,
             ),
-        ],
+          ),
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _isLoading ? null : _handleFormSubmit,
+              tooltip: 'Save Resume',
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                _buildStepIndicator(),
+                LinearProgressIndicator(
+                  value: _overallProgress,
+                  backgroundColor: Colors.grey[300],
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentStep = index;
+                      });
+                      // Dismiss keyboard when changing pages
+                      FocusScope.of(context).unfocus();
+                    },
+                    children: [
+                      _buildScrollableStep(_buildPersonalInfoStep()),
+                      _buildScrollableStep(_buildSummaryStep()),
+                      _buildScrollableStep(_buildExperienceStep()),
+                      _buildScrollableStep(_buildEducationStep()),
+                      _buildScrollableStep(_buildSkillsStep()),
+                      _buildScrollableStep(_buildProjectsStep()),
+                      _buildScrollableStep(_buildCertificationsStep()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
+        ),
+        bottomNavigationBar: _buildNavigationButtons(),
       ),
-      bottomNavigationBar: _buildNavigationButtons(),
     );
   }
 
@@ -781,6 +810,12 @@ class _ResumeFormState extends State<ResumeForm>
       },
       onChanged: onChanged,
       autofocus: autofocus,
+      textInputAction: maxLines == null ? TextInputAction.next : TextInputAction.newline,
+      onFieldSubmitted: (_) {
+        if (maxLines == null) {
+          FocusScope.of(context).nextFocus();
+        }
+      },
     );
   }
 
@@ -1368,6 +1403,18 @@ class _ResumeFormState extends State<ResumeForm>
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildScrollableStep(Widget content) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: content,
       ),
     );
   }

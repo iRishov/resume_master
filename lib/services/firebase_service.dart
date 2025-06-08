@@ -15,13 +15,18 @@ class FirebaseService {
   User? get currentUser => _auth.currentUser;
 
   // User Management
-  Future<void> addUserToDatabase(User user) async {
+  Future<void> addUserToDatabase(
+    User user, {
+    String? role,
+    String? name,
+  }) async {
     try {
       await _firestore.collection('users').doc(user.uid).set({
         'uid': user.uid,
         'email': user.email,
-        'name': user.displayName,
+        'name': name ?? user.displayName,
         'photoUrl': user.photoURL,
+        'role': role ?? 'job_seeker', // Default to job seeker if not specified
         'lastSignInTime': DateTime.now(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),

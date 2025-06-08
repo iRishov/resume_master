@@ -1,20 +1,97 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own profile
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isRecruiter() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter';
+    }
+
+    function isJobSeeker() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'job_seeker';
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    function isValidPhoneNumber(phone) {
+      return phone.matches('^\\+?[\\d\\s-]{10,}$');
+    }
+
+    function isValidEmail(email) {
+      return email.matches('^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$');
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId);
+      allow delete: if false;
     }
-    
-    // Allow users to manage their own resumes
+
+    // Resumes collection
     match /resumes/{resumeId} {
-      // Allow read, create, update, and delete only if the authenticated user's UID matches the userId field in the document
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
     }
-    
+
+    // Jobs collection
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated() && (
+        isJobSeeker() || 
+        (isRecruiter() && request.auth.uid == resource.data.recruiterId)
+      );
+      allow create: if isRecruiter() && request.resource.data.recruiterId == request.auth.uid;
+      allow update: if isRecruiter() && request.auth.uid == resource.data.recruiterId;
+      allow delete: if isRecruiter() && request.auth.uid == resource.data.recruiterId;
+    }
+
+    // Job postings collection
+    match /job_postings/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isRecruiter();
+      allow update: if isRecruiter() && isOwner(resource.data.recruiterId);
+      allow delete: if isRecruiter() && isOwner(resource.data.recruiterId);
+    }
+
+    // Applications collection
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.applicantId || 
+        (isRecruiter() && (
+          resource.data.recruiterId == request.auth.uid ||
+          exists(/databases/$(database)/documents/job_postings/$(resource.data.jobId)) &&
+          get(/databases/$(database)/documents/job_postings/$(resource.data.jobId)).data.recruiterId == request.auth.uid
+        ))
+      );
+      allow create: if isAuthenticated() && 
+        request.resource.data.applicantId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.applicantId ||
+        (isRecruiter() && (
+          resource.data.recruiterId == request.auth.uid ||
+          exists(/databases/$(database)/documents/job_postings/$(resource.data.jobId)) &&
+          get(/databases/$(database)/documents/job_postings/$(resource.data.jobId)).data.recruiterId == request.auth.uid
+        ))
+      );
+      allow delete: if false;
+    }
+
     // Default deny all
     match /{document=**} {
       allow read, write: if false;

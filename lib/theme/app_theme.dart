@@ -17,127 +17,85 @@ class AppTheme {
   static const Color disabledTextColor = Color(0xFFBDBDBD);
 
   // Light theme
-  static final ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    colorScheme: ColorScheme.light(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      surface: surfaceColor,
-      background: backgroundColor,
-      error: errorColor,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
-      onSurface: primaryTextColor,
-      onError: Colors.white,
-    ),
-    scaffoldBackgroundColor: backgroundColor,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: surfaceColor,
-      foregroundColor: primaryTextColor,
-      elevation: 0,
-      centerTitle: true,
-      iconTheme: IconThemeData(color: primaryTextColor),
-    ),
-    cardTheme: CardTheme(
-      color: surfaceColor,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: surfaceColor,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.light(
+        primary: const Color(0xFF1A237E), // Dark blue
+        secondary: const Color(0xFF3949AB), // Indigo
+        surface: Colors.white,
+        background: const Color(0xFFF5F5F5), // Light grey background
+        error: Colors.red.shade400,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: Colors.black87,
+        onBackground: Colors.black87,
+        onError: Colors.white,
+        brightness: Brightness.light,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: errorColor),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
+      scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1A237E),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
       ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: primaryColor,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1A237E),
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       ),
-    ),
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: primaryTextColor,
-        fontFamily: 'CrimsonText',
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF1A237E),
+          side: const BorderSide(color: Color(0xFF1A237E)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       ),
-      displayMedium: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: primaryTextColor,
-        fontFamily: 'CrimsonText',
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: const Color(0xFF1A237E)),
       ),
-      displaySmall: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: primaryTextColor,
-        fontFamily: 'CrimsonText',
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF1A237E)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF1A237E)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.red.shade400),
+        ),
+        labelStyle: const TextStyle(color: Color(0xFF1A237E)),
+        hintStyle: const TextStyle(color: Colors.black54),
       ),
-      bodyLarge: TextStyle(
-        fontSize: 16,
-        color: primaryTextColor,
-        height: 1.5,
-        fontFamily: 'CrimsonText',
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(color: Colors.black87),
+        displayMedium: TextStyle(color: Colors.black87),
+        displaySmall: TextStyle(color: Colors.black87),
+        headlineLarge: TextStyle(color: Colors.black87),
+        headlineMedium: TextStyle(color: Colors.black87),
+        headlineSmall: TextStyle(color: Colors.black87),
+        titleLarge: TextStyle(color: Colors.black87),
+        titleMedium: TextStyle(color: Colors.black87),
+        titleSmall: TextStyle(color: Colors.black87),
+        bodyLarge: TextStyle(color: Colors.black87),
+        bodyMedium: TextStyle(color: Colors.black87),
+        bodySmall: TextStyle(color: Colors.black87),
+        labelLarge: TextStyle(color: Colors.black87),
+        labelMedium: TextStyle(color: Colors.black87),
+        labelSmall: TextStyle(color: Colors.black87),
       ),
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: secondaryTextColor,
-        height: 1.4,
-        fontFamily: 'CrimsonText',
-      ),
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: secondaryTextColor,
-        fontFamily: 'CrimsonText',
-      ),
-      labelLarge: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-        fontFamily: 'CrimsonText',
-      ),
-      labelMedium: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: primaryTextColor,
-        fontFamily: 'CrimsonText',
-      ),
-    ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: surfaceColor,
-      selectedItemColor: primaryColor,
-      unselectedItemColor: secondaryTextColor,
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-    ),
-    dialogTheme: DialogTheme(
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-  );
+    );
+  }
 }
