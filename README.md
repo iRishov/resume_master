@@ -151,15 +151,3 @@ class Certification {
 2. Install dependencies: `flutter pub get`
 3. Configure Firebase
 4. Run the app: `flutter run`
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
-
-## Support
-
-For support, email support@resumemaster.com or join our Discord community.

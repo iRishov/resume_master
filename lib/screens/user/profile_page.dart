@@ -61,7 +61,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Color _scoreColor(double score) {
-    // Using Material Design 3 color palette with better contrast
     if (score >= 90) {
       return Theme.of(context).colorScheme.primary;
     } else if (score >= 80) {
@@ -704,6 +703,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           color: Theme.of(
                             context,
                           ).colorScheme.onSurface.withOpacity(0.6),
+                          fontSize: 16,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -711,6 +711,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         _highestBadge,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
+                          fontSize: 20,
                           color: _highestBadgeColor,
                         ),
                       ),
@@ -727,49 +728,45 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildStatCard(
     IconData icon,
-    String label,
+    String title,
     String value,
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withOpacity(0.7),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: color,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
             ),
           ),
         ],
@@ -960,158 +957,218 @@ class _ProfilePageState extends State<ProfilePage> {
               maxChildSize: 0.95,
               builder:
                   (context, scrollController) => Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      borderRadius: const BorderRadius.vertical(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
                         top: Radius.circular(20),
                       ),
                     ),
                     child: Column(
                       children: [
-                        // Handle bar
                         Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          width: 40,
-                          height: 4,
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.1),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: ListView(
-                            controller: scrollController,
-                            padding: const EdgeInsets.all(20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Header
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      job['title'] ?? 'Untitled Job',
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      application['jobTitle'] ?? 'Untitled Job',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.headlineSmall?.copyWith(
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Application Status
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      application['status'] == 'accepted'
-                                          ? Icons.check_circle
-                                          : application['status'] == 'rejected'
-                                          ? Icons.cancel
-                                          : application['status'] == 'interview'
-                                          ? Icons.event
-                                          : Icons.pending,
-                                      color:
-                                          application['status'] == 'accepted'
-                                              ? Colors.green
-                                              : application['status'] ==
-                                                  'rejected'
-                                              ? Colors.red
-                                              : application['status'] ==
-                                                  'interview'
-                                              ? Colors.blue
-                                              : Colors.orange,
-                                    ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      'Status: ${application['status'].toString().toUpperCase()}',
-                                      style: TextStyle(
-                                        color:
-                                            application['status'] == 'accepted'
-                                                ? Colors.green
-                                                : application['status'] ==
-                                                    'rejected'
-                                                ? Colors.red
-                                                : application['status'] ==
-                                                    'interview'
-                                                ? Colors.blue
-                                                : Colors.orange,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      application['companyName'] ??
+                                          'Company Name',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(color: Colors.grey[600]),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
-
-                              // Company Info
-                              _buildInfoRow(
-                                Icons.business,
-                                job['company'] ?? 'Company Name',
-                              ),
-                              _buildInfoRow(
-                                Icons.location_on,
-                                job['location'] ?? 'Location not specified',
-                              ),
-                              _buildInfoRow(
-                                Icons.work,
-                                job['type'] ?? 'Job Type not specified',
-                              ),
-                              if (job['salary'] != null)
-                                _buildInfoRow(
-                                  Icons.attach_money,
-                                  job['salary'],
-                                ),
-                              const SizedBox(height: 24),
-
-                              // Description
-                              Text(
-                                'Job Description',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                job['description'] ?? 'No description provided',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Requirements
-                              Text(
-                                'Requirements',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                job['requirements'] ??
-                                    'No requirements specified',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Application Date
-                              Text(
-                                'Applied on ${_formatDate(application['createdAt'])}',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey[600]),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.pop(context),
                               ),
                             ],
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Application Status
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(
+                                      application['status'],
+                                    ).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    application['status'] ?? 'Pending',
+                                    style: TextStyle(
+                                      color: _getStatusColor(
+                                        application['status'],
+                                      ),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Job Details
+                                Text(
+                                  'Job Details',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 16),
+                                _buildInfoRow(
+                                  Icons.location_on,
+                                  job['location'] ?? 'Location not specified',
+                                ),
+                                if (job['salary'] != null)
+                                  _buildInfoRow(
+                                    Icons.attach_money,
+                                    job['salary'],
+                                  ),
+                                _buildInfoRow(
+                                  Icons.category,
+                                  job['category'] ?? 'Category not specified',
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Description
+                                Text(
+                                  'Job Description',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  job['description'] ??
+                                      'No description provided',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Requirements
+                                Text(
+                                  'Requirements',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                if (job['requirements'] != null)
+                                  if (job['requirements'] is List)
+                                    ...(job['requirements'] as List).map(
+                                      (req) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(Icons.circle, size: 8),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                req.toString(),
+                                                style:
+                                                    Theme.of(
+                                                      context,
+                                                    ).textTheme.bodyMedium,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      job['requirements'].toString(),
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.bodyMedium,
+                                    )
+                                else
+                                  Text(
+                                    'No requirements specified',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                const SizedBox(height: 24),
+
+                                // Application Details
+                                Text(
+                                  'Application Details',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 16),
+                                _buildInfoRow(
+                                  Icons.calendar_today,
+                                  'Applied on ${_formatDate(application['createdAt'])}',
+                                ),
+                                if (application['resumeId'] != null)
+                                  _buildInfoRow(
+                                    Icons.description,
+                                    'Resume: ${application['resumeName'] ?? 'Not specified'}',
+                                  ),
+                                if (application['coverLetter'] != null)
+                                  _buildInfoRow(
+                                    Icons.article,
+                                    'Cover Letter: ${application['coverLetter']}',
+                                  ),
+                                const SizedBox(height: 24),
+
+                                // Recruiter Contact
+                                if (job['recruiter'] != null) ...[
+                                  Text(
+                                    'Recruiter Contact',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildInfoRow(
+                                    Icons.person,
+                                    'Recruiter: ${job['recruiter']['name'] ?? 'Not specified'}',
+                                  ),
+                                  _buildInfoRow(
+                                    Icons.email,
+                                    'Email: ${job['recruiter']['email'] ?? 'Not specified'}',
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -1151,5 +1208,17 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'pending':
+      default:
+        return Colors.orange;
+    }
   }
 }

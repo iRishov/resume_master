@@ -21,8 +21,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.light(
-        primary: const Color(0xFF1A237E), // Dark blue
-        secondary: const Color(0xFF3949AB), // Indigo
+        primary: const Color.fromARGB(255, 44, 32, 219), // Dark blue
+        secondary: const Color.fromARGB(255, 32, 110, 212), // Indigo
         surface: Colors.white,
         background: const Color(0xFFF5F5F5), // Light grey background
         error: Colors.red.shade400,

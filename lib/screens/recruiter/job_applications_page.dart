@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
 import 'package:resume_master/screens/user/resume_preview.dart';
 import 'package:resume_master/models/resume.dart';
+import 'package:resume_master/widgets/bottom_nav_bar.dart';
+import 'package:resume_master/theme/page_transitions.dart';
+import 'package:vibration/vibration.dart';
 
 class JobApplicationsPage extends StatefulWidget {
   final String jobId;
@@ -498,9 +500,8 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
   }
 
   Future<void> _showConfirmationDialog(
-    BuildContext context,
-    String status,
     String applicationId,
+    String status,
   ) async {
     String message;
     String title;
@@ -533,15 +534,19 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
+              onPressed: () async {
+                if (await Vibration.hasVibrator()) {
+                  Vibration.vibrate(duration: 50);
+                }
                 Navigator.of(context).pop(false);
               },
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
+              onPressed: () async {
+                if (await Vibration.hasVibrator()) {
+                  Vibration.vibrate(duration: 50);
+                }
                 Navigator.of(context).pop(true);
               },
               style: ElevatedButton.styleFrom(
@@ -574,11 +579,8 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
             onPressed:
                 status == 'accepted'
                     ? null
-                    : () => _showConfirmationDialog(
-                      context,
-                      'accepted',
-                      application['id'],
-                    ),
+                    : () =>
+                        _showConfirmationDialog(application['id'], 'accepted'),
             icon: const Icon(Icons.check),
             label: const Text('Accept'),
             style: ElevatedButton.styleFrom(
@@ -594,11 +596,8 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
             onPressed:
                 status == 'rejected'
                     ? null
-                    : () => _showConfirmationDialog(
-                      context,
-                      'rejected',
-                      application['id'],
-                    ),
+                    : () =>
+                        _showConfirmationDialog(application['id'], 'rejected'),
             icon: const Icon(Icons.close),
             label: const Text('Reject'),
             style: ElevatedButton.styleFrom(
@@ -614,11 +613,8 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
             onPressed:
                 status == 'pending'
                     ? null
-                    : () => _showConfirmationDialog(
-                      context,
-                      'pending',
-                      application['id'],
-                    ),
+                    : () =>
+                        _showConfirmationDialog(application['id'], 'pending'),
             icon: const Icon(Icons.pending),
             label: const Text('Pending'),
             style: ElevatedButton.styleFrom(

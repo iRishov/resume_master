@@ -187,22 +187,34 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
     final scorePercentage = (score * 100).round().clamp(0, 100);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: _getSectionColor(score),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getBorderColor(score), width: 1.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _getBorderColor(score), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_getSectionIcon(section), color: color, size: 16),
+          Icon(_getSectionIcon(section), color: color, size: 18),
           const SizedBox(width: 4),
-          Text(
-            '$scorePercentage%',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              '$scorePercentage%',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -234,15 +246,27 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
   }
 
   Widget _buildFeedbackItem(String text, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                height: 1.4,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ],
       ),
@@ -255,20 +279,18 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children:
-          items
-              .map(
-                (item) => _buildFeedbackItem(
-                  item,
-                  isStrengths ? Icons.check_circle : Icons.info,
-                  isStrengths ? Colors.green[800]! : Colors.orange[800]!,
-                ),
-              )
-              .toList(),
+          items.map((item) {
+            String emoji = isStrengths ? '✨ ' : '💡 ';
+            return _buildFeedbackItem(
+              emoji + item,
+              isStrengths ? Icons.check_circle : Icons.lightbulb_outline,
+              isStrengths ? Colors.green[800]! : Colors.orange[800]!,
+            );
+          }).toList(),
     );
   }
 
   Widget _buildBadge(double score) {
-    // Convert score to percentage
     final scorePercentage = (score * 100).round().clamp(0, 100);
 
     String badgeLabel;
@@ -276,53 +298,60 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
     Color badgeColor;
 
     if (scorePercentage >= 90) {
-      badgeLabel = 'Resume Master';
+      badgeLabel = 'Resume Champion';
       badgeIcon = Icons.workspace_premium;
-      badgeColor = const Color(0xFF1B5E20); // Dark Green
+      badgeColor = const Color(0xFF1B5E20);
     } else if (scorePercentage >= 80) {
-      badgeLabel = 'Resume Expert';
+      badgeLabel = 'Resume Star';
       badgeIcon = Icons.star;
-      badgeColor = const Color(0xFF2E7D32); // Green
+      badgeColor = const Color(0xFF2E7D32);
     } else if (scorePercentage >= 70) {
-      badgeLabel = 'Resume Pro';
-      badgeIcon = Icons.emoji_events;
-      badgeColor = const Color(0xFF43A047); // Light Green
-    } else if (scorePercentage >= 60) {
       badgeLabel = 'Resume Builder';
-      badgeIcon = Icons.construction;
-      badgeColor = const Color(0xFFF57F17); // Amber
-    } else if (scorePercentage >= 50) {
+      badgeIcon = Icons.emoji_events;
+      badgeColor = const Color(0xFF43A047);
+    } else if (scorePercentage >= 60) {
       badgeLabel = 'Resume Learner';
       badgeIcon = Icons.school;
-      badgeColor = const Color(0xFFE65100); // Deep Orange
-    } else if (scorePercentage >= 40) {
+      badgeColor = const Color(0xFFF57F17);
+    } else if (scorePercentage >= 50) {
       badgeLabel = 'Resume Starter';
       badgeIcon = Icons.flag;
-      badgeColor = const Color(0xFFD84315); // Deep Orange
+      badgeColor = const Color(0xFFE65100);
+    } else if (scorePercentage >= 40) {
+      badgeLabel = 'Getting Started';
+      badgeIcon = Icons.rocket_launch;
+      badgeColor = const Color(0xFFD84315);
     } else {
-      badgeLabel = 'Needs Work';
-      badgeIcon = Icons.warning;
-      badgeColor = const Color(0xFFB71C1C); // Dark Red
+      badgeLabel = 'Begin Your Journey';
+      badgeIcon = Icons.auto_awesome;
+      badgeColor = const Color(0xFFB71C1C);
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: _getSectionColor(score),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _getBorderColor(score), width: 1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _getBorderColor(score), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: badgeColor.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(badgeIcon, color: badgeColor, size: 14),
-          const SizedBox(width: 4),
+          Icon(badgeIcon, color: badgeColor, size: 24),
+          const SizedBox(width: 10),
           Text(
             badgeLabel,
             style: TextStyle(
               color: badgeColor,
               fontWeight: FontWeight.bold,
-              fontSize: 11,
+              fontSize: 15,
             ),
           ),
         ],
@@ -340,11 +369,18 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
     final highestBadgeColor = stats['highestBadgeColor'];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -364,13 +400,17 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                 children: [
                   Text(
                     'Average Score',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     '${averageScore.toStringAsFixed(0)}%',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: _scoreColor(averageScore / 100),
                     ),
@@ -379,25 +419,32 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  horizontal: 16,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: highestBadgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: highestBadgeColor.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: highestBadgeColor.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(highestBadgeIcon, color: highestBadgeColor, size: 16),
-                    const SizedBox(width: 4),
+                    Icon(highestBadgeIcon, color: highestBadgeColor, size: 20),
+                    const SizedBox(width: 8),
                     Text(
                       highestBadge,
                       style: TextStyle(
                         color: highestBadgeColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 16,
                       ),
                     ),
                   ],
@@ -405,16 +452,29 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Total Resumes: ${resumes.length}',
                 style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+                  fontSize: 16,
+                  color: Colors.grey[700],
                   fontWeight: FontWeight.w500,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ResumeForm()),
+                  ).then((_) => _fetchResumes());
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Create New'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -436,12 +496,10 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
           scoreResult['overallFeedback']['detailedFeedback']
               as Map<String, Map<String, dynamic>>;
 
-      // Calculate average of section scores
       double sectionAverage = 0.0;
       int sectionCount = 0;
       for (final entry in sectionScores.entries) {
         if (entry.key != 'atsCompatibility') {
-          // Exclude ATS score from average
           sectionAverage += entry.value as double;
           sectionCount++;
         }
@@ -451,8 +509,9 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
 
       return Card(
         elevation: 0,
+        margin: const EdgeInsets.only(bottom: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
         color: Colors.white,
@@ -462,57 +521,76 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
             initiallyExpanded: false,
             collapsedIconColor: Colors.grey[600],
             iconColor: Colors.grey[600],
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            tilePadding: const EdgeInsets.all(20),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  resume['personalInfo']?['fullName'] ?? 'Untitled Resume',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
                 Row(
                   children: [
+                    Expanded(
+                      child: Text(
+                        resume['title'] ??
+                            resume['personalInfo']?['fullName'] ??
+                            'Untitled Resume',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 16,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: _scoreColor(averageScore / 100),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _scoreColor(
+                              averageScore / 100,
+                            ).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Text(
                         '${averageScore.toStringAsFixed(0)}%',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 16,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    _buildBadge(averageScore / 100),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children:
-                      sectionScores.entries.map((entry) {
-                        final score = entry.value as double;
-                        return _buildSectionScore(score, entry.key);
-                      }).toList(),
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildBadge(averageScore / 100),
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 1.8,
+                      children:
+                          sectionScores.entries.map((entry) {
+                            final score = entry.value as double;
+                            return _buildSectionScore(score, entry.key);
+                          }).toList(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -521,12 +599,12 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -538,59 +616,67 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Divider(height: 32),
+                            const Divider(height: 40),
                             Row(
                               children: [
-                                Icon(
-                                  _getSectionIcon(section),
-                                  color: _scoreColor(sectionScore),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  section.replaceFirst(
-                                    section[0],
-                                    section[0].toUpperCase(),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _getSectionColor(sectionScore),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                    color: Colors.black87,
+                                  child: Icon(
+                                    _getSectionIcon(section),
+                                    color: _scoreColor(sectionScore),
+                                    size: 24,
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    section.replaceFirst(
+                                      section[0],
+                                      section[0].toUpperCase(),
+                                    ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
                                 _buildSectionScore(sectionScore, section),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             if (strengths[section]?.isNotEmpty ?? false) ...[
-                              const Text(
+                              Text(
                                 'Strengths',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.green[800],
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 8),
                               _buildFeedbackList(
                                 strengths[section]!,
                                 isStrengths: true,
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
                             ],
                             if (suggestions[section]?.isNotEmpty ?? false) ...[
-                              const Text(
+                              Text(
                                 'Suggestions',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.orange[800],
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              _buildFeedbackList(suggestions[section]!),
                               const SizedBox(height: 8),
+                              _buildFeedbackList(suggestions[section]!),
+                              const SizedBox(height: 16),
                             ],
                           ],
                         );
@@ -607,28 +693,53 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
       debugPrint('Error calculating score for resume: $e');
       return Card(
         elevation: 0,
+        margin: const EdgeInsets.only(bottom: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
         color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                resume['personalInfo']?['fullName'] ?? 'Untitled Resume',
+                resume['title'] ??
+                    resume['personalInfo']?['fullName'] ??
+                    'Untitled Resume',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Error calculating score',
-                style: TextStyle(color: Colors.red[700], fontSize: 14),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red[700], size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Error calculating score',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -683,14 +794,21 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.description_outlined,
-                          size: 64,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.4),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.description_outlined,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
                         Text(
                           'No Resumes Found',
                           style: Theme.of(
@@ -700,7 +818,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           'Create your first resume to see scores',
                           style: Theme.of(
@@ -711,27 +829,50 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                             ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                  : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildAverageStats(_resumes),
-                        ..._resumes.map((resume) => _buildResumeCard(resume)),
-                        const SizedBox(height: 16),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            'assets/images/score.jpg',
-                            width: double.infinity,
-                            height: 150,
-                            fit: BoxFit.cover,
+                        const SizedBox(height: 32),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ResumeForm(),
+                              ),
+                            ).then((_) => _fetchResumes());
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Resume'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ],
+                    ),
+                  )
+                  : AnimationLimiter(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: AnimationConfiguration.toStaggeredList(
+                        duration: const Duration(milliseconds: 375),
+                        childAnimationBuilder:
+                            (widget) => SlideAnimation(
+                              horizontalOffset: 50.0,
+                              child: FadeInAnimation(child: widget),
+                            ),
+                        children: [
+                          _buildAverageStats(_resumes),
+                          ..._resumes.map((resume) => _buildResumeCard(resume)),
+                        ],
+                      ),
                     ),
                   ),
         ),

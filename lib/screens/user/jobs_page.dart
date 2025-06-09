@@ -336,187 +336,181 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   void _showJobDetails(Map<String, dynamic> job) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.9,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder:
+                (context, scrollController) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.1),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    job['title'] ?? 'Untitled Job',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    job['recruiter']?['companyName'] ??
+                                        'Company Name',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Job Details
                               Text(
-                                job['title'] ?? 'Untitled Job',
-                                style: Theme.of(context).textTheme.headlineSmall
+                                'Job Details',
+                                style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(
+                                Icons.location_on,
+                                job['location'] ?? 'Location not specified',
+                              ),
+                              if (job['salary'] != null)
+                                _buildInfoRow(
+                                  Icons.attach_money,
+                                  job['salary'],
+                                ),
+                              _buildInfoRow(
+                                Icons.category,
+                                job['category'] ?? 'Category not specified',
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Description
                               Text(
-                                job['recruiter']?['companyName'] ??
-                                    'Company Name',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: Colors.grey[600]),
+                                'Job Description',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                job['description'] ?? 'No description provided',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Requirements
+                              Text(
+                                'Requirements',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              if (job['requirements'] != null)
+                                if (job['requirements'] is List)
+                                  ...(job['requirements'] as List).map(
+                                    (req) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(Icons.circle, size: 8),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              req.toString(),
+                                              style:
+                                                  Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyMedium,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    job['requirements'].toString(),
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  )
+                              else
+                                Text(
+                                  'No requirements specified',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              const SizedBox(height: 32),
+
+                              // Apply Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _showApplyDialog(job);
+                                  },
+                                  icon: const Icon(Icons.send),
+                                  label: const Text('Apply Now'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                job['type'] ?? 'Full-time',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                job['experienceLevel'] ?? 'Entry Level',
-                                style: const TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Job Details
-                    Text(
-                      'Job Details',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow(
-                      Icons.location_on,
-                      job['location'] ?? 'Location not specified',
-                    ),
-                    if (job['salary'] != null)
-                      _buildInfoRow(Icons.attach_money, job['salary']),
-                    _buildInfoRow(
-                      Icons.category,
-                      job['category'] ?? 'Category not specified',
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Description
-                    Text(
-                      'Job Description',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      job['description'] ?? 'No description provided',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Requirements
-                    Text(
-                      'Requirements',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (job['requirements'] != null)
-                      if (job['requirements'] is List)
-                        ...(job['requirements'] as List).map(
-                          (req) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(Icons.circle, size: 8),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    req.toString(),
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        Text(
-                          job['requirements'].toString(),
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        )
-                    else
-                      Text(
-                        'No requirements specified',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    const SizedBox(height: 32),
-
-                    // Apply Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showApplyDialog(job);
-                        },
-                        icon: const Icon(Icons.send),
-                        label: const Text('Apply Now'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
           ),
     );
   }

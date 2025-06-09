@@ -49,6 +49,8 @@ class _ResumeFormState extends State<ResumeForm>
   late TextEditingController _nationalityController;
   late TextEditingController _linkedinController;
   late TextEditingController _newSkillController;
+  late TextEditingController _newLanguageController;
+  late TextEditingController _titleController;
 
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -75,6 +77,9 @@ class _ResumeFormState extends State<ResumeForm>
   bool _isCertificationsComplete = false;
   double _overallProgress = 0.0;
 
+  // New skill category
+  String? _selectedCategory;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -88,6 +93,7 @@ class _ResumeFormState extends State<ResumeForm>
       duration: const Duration(milliseconds: 300),
     );
     _newSkillController = TextEditingController();
+    _newLanguageController = TextEditingController();
   }
 
   void _initializeControllers() {
@@ -101,6 +107,7 @@ class _ResumeFormState extends State<ResumeForm>
     _objectiveController = TextEditingController();
     _summaryController = TextEditingController();
     _hobbiesController = TextEditingController();
+    _titleController = TextEditingController();
   }
 
   // Load resume data into model and controllers
@@ -138,6 +145,7 @@ class _ResumeFormState extends State<ResumeForm>
         _education.clear();
         _projects.clear();
         _certifications.clear();
+        _titleController.text = 'Untitled Resume';
         setState(() => _isLoading = false);
         _updateProgress(); // Calculate initial progress
         return;
@@ -169,6 +177,8 @@ class _ResumeFormState extends State<ResumeForm>
       _objectiveController.text = _resume!.objective;
       _summaryController.text = _resume!.summary;
       _hobbiesController.text = _resume!.hobbies;
+      _titleController.text =
+          _resume!.title.isNotEmpty ? _resume!.title : 'Untitled Resume';
 
       // Update lists using clear and addAll
       _selectedSkills.clear();
@@ -201,7 +211,16 @@ class _ResumeFormState extends State<ResumeForm>
   }
 
   // Build Resume model from controllers and lists
-  Resume _buildResumeForSave(String userId) {
+  Future<Resume> _buildResumeForSave(String userId) async {
+    // Get user's name
+    // Get count of existing resumes
+
+    // Use the title from the controller
+    final title =
+        _titleController.text.trim().isNotEmpty
+            ? _titleController.text.trim()
+            : 'Untitled Resume';
+
     return Resume(
       id: _resume?.id ?? '',
       userId: userId,
@@ -227,75 +246,20 @@ class _ResumeFormState extends State<ResumeForm>
       hobbies: _hobbiesController.text.trim(),
       createdAt: _resume?.createdAt,
       updatedAt: DateTime.now(),
-      title: '${_fullNameController.text.trim()}\'s Resume',
+      title: title,
     );
   }
 
   // Save handler
   Future<void> _handleFormSubmit() async {
-    if (_isLoading) return;
-    // Validate required fields
-    if (_fullNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your full name'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    if (_emailController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    if (_phoneController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your phone number'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    if (_education.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one education entry'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    bool hasValidEducation = false;
-    for (var edu in _education) {
-      if (edu.degree.isNotEmpty &&
-          edu.institution.isNotEmpty &&
-          edu.year.isNotEmpty) {
-        hasValidEducation = true;
-        break;
-      }
-    }
-    if (!hasValidEducation) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please fill in all required fields for at least one education entry',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (!_validateCurrentStep()) {
       return;
     }
     setState(() => _isLoading = true);
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
-      final resume = _buildResumeForSave(user.uid);
+      final resume = await _buildResumeForSave(user.uid);
       final resumeData = resume.toMap();
       // Add createdAt only for new resumes
       if (_resume == null || _resume!.id.isEmpty) {
@@ -330,47 +294,21 @@ class _ResumeFormState extends State<ResumeForm>
       if (!mounted) return;
       Navigator.pop(context); // Dismiss loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Resume saved successfully!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Resume saved successfully!')),
       );
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const Home(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-            var tween = Tween(
-              begin: begin,
-              end: end,
-            ).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-            return SlideTransition(position: offsetAnimation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      Navigator.pop(context); // Return to previous screen
     } catch (e) {
       if (!mounted) return;
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving resume: ${e.toString()}'),
           backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: Colors.white,
-            onPressed: _handleFormSubmit,
-          ),
         ),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -388,6 +326,8 @@ class _ResumeFormState extends State<ResumeForm>
     _nationalityController.dispose();
     _linkedinController.dispose();
     _newSkillController.dispose();
+    _newLanguageController.dispose();
+    _titleController.dispose();
     _pageAnimationController.dispose();
     super.dispose();
   }
@@ -810,7 +750,8 @@ class _ResumeFormState extends State<ResumeForm>
       },
       onChanged: onChanged,
       autofocus: autofocus,
-      textInputAction: maxLines == null ? TextInputAction.next : TextInputAction.newline,
+      textInputAction:
+          maxLines == null ? TextInputAction.next : TextInputAction.newline,
       onFieldSubmitted: (_) {
         if (maxLines == null) {
           FocusScope.of(context).nextFocus();
@@ -875,87 +816,74 @@ class _ResumeFormState extends State<ResumeForm>
   }
 
   Widget _buildExperienceStepContent() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader(
-              title: 'Work Experience',
-              subtitle:
-                  "Optional — Add your work experience or skip if you're a fresh graduate",
-              icon: Icons.work_outline,
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: 'Work Experience',
+          subtitle:
+              "Optional — Add your work experience or skip if you're a fresh graduate",
+          icon: Icons.work_outline,
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue[700],
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Tips for Fresh Graduates',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    "If you're a fresh graduate, you can:",
+                    'Tips for Fresh Graduates',
                     style: TextStyle(
-                      color: Colors.blue[900],
-                      fontWeight: FontWeight.w500,
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildTipItem(
-                    'Focus on your education and academic achievements',
-                  ),
-                  _buildTipItem('Add relevant projects and internships'),
-                  _buildTipItem('Highlight your skills and certifications'),
-                  _buildTipItem(
-                    'Include any volunteer work or leadership roles',
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            ...List.generate(_experiences.length, (index) {
-              return ExperienceCard(
-                experience: _experiences[index],
-                autofocus: false,
-                onChanged: (exp) => _updateExperience(index, exp),
-                onDelete: () => _removeExperience(index),
-              );
-            }),
-            const SizedBox(height: 16),
-            _buildAddButton(
-              onPressed: _addExperience,
-              label: 'Add Work Experience',
-              icon: Icons.add_circle_outline,
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                "If you're a fresh graduate, you can:",
+                style: TextStyle(
+                  color: Colors.blue[900],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildTipItem(
+                'Focus on your education and academic achievements',
+              ),
+              _buildTipItem('Add relevant projects and internships'),
+              _buildTipItem('Highlight your skills and certifications'),
+              _buildTipItem('Include any volunteer work or leadership roles'),
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 24),
+        ...List.generate(_experiences.length, (index) {
+          return ExperienceCard(
+            experience: _experiences[index],
+            autofocus: false,
+            onChanged: (exp) => _updateExperience(index, exp),
+            onDelete: () => _removeExperience(index),
+          );
+        }),
+        const SizedBox(height: 16),
+        _buildAddButton(
+          onPressed: _addExperience,
+          label: 'Add Work Experience',
+          icon: Icons.add_circle_outline,
+        ),
+      ],
     );
   }
 
@@ -1020,6 +948,101 @@ class _ResumeFormState extends State<ResumeForm>
   }
 
   Widget _buildSkillsStepContent() {
+    // Define skill categories and their skills
+    final Map<String, List<String>> skillCategories = {
+      'Programming': [
+        'Python',
+        'Java',
+        'JavaScript',
+        'TypeScript',
+        'C++',
+        'C#',
+        'Ruby',
+        'PHP',
+        'Swift',
+        'Kotlin',
+        'Go',
+        'Rust',
+        'Scala',
+        'Perl',
+        'R',
+      ],
+      'Web Development': [
+        'HTML',
+        'CSS',
+        'React',
+        'Angular',
+        'Vue.js',
+        'Node.js',
+        'Express.js',
+        'Django',
+        'Flask',
+        'Spring Boot',
+        'Laravel',
+        'ASP.NET',
+        'GraphQL',
+        'REST API',
+      ],
+      'Mobile Development': [
+        'Android',
+        'iOS',
+        'React Native',
+        'Flutter',
+        'Xamarin',
+        'Swift',
+        'Kotlin',
+        'Mobile UI/UX',
+        'App Store',
+        'Play Store',
+      ],
+      'Database': [
+        'SQL',
+        'MySQL',
+        'PostgreSQL',
+        'MongoDB',
+        'Redis',
+        'Cassandra',
+        'Oracle',
+        'SQLite',
+        'Firebase',
+        'DynamoDB',
+      ],
+      'DevOps': [
+        'Docker',
+        'Kubernetes',
+        'AWS',
+        'Azure',
+        'GCP',
+        'Jenkins',
+        'GitLab CI',
+        'GitHub Actions',
+        'Terraform',
+        'Ansible',
+      ],
+      'Data Science': [
+        'Machine Learning',
+        'Deep Learning',
+        'Data Analysis',
+        'Data Visualization',
+        'TensorFlow',
+        'PyTorch',
+        'Pandas',
+        'NumPy',
+        'Scikit-learn',
+        'R',
+      ],
+      'Soft Skills': [
+        'Communication',
+        'Leadership',
+        'Teamwork',
+        'Problem Solving',
+        'Time Management',
+        'Adaptability',
+        'Critical Thinking',
+        'Creativity',
+      ],
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1029,6 +1052,8 @@ class _ResumeFormState extends State<ResumeForm>
           icon: Icons.psychology,
         ),
         const SizedBox(height: 24),
+
+        // Custom Skills Section at the top
         Text(
           'Custom Skills',
           style: Theme.of(
@@ -1072,15 +1097,292 @@ class _ResumeFormState extends State<ResumeForm>
           onSubmitted: (_) => _addSkill(),
         ),
         const SizedBox(height: 24),
-        SelectedSkillsDisplay(
-          selectedSkills: _selectedSkills,
-          onSkillRemoved: (skill) {
-            setState(() {
-              _selectedSkills.remove(skill);
-              _updateProgress();
-            });
-          },
+
+        // Selected Skills Display
+        if (_selectedSkills.isNotEmpty) ...[
+          Text(
+            'Selected Skills',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                _selectedSkills.map((skill) {
+                  return Chip(
+                    label: Text(skill),
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedSkills.remove(skill);
+                        _updateProgress();
+                      });
+                    },
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }).toList(),
+          ),
+          const SizedBox(height: 32),
+        ],
+
+        // Preset Skills Section with Lazy Loading
+        Text(
+          'Preset Skills',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Select from our predefined list of skills',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 16),
+
+        // Skill Categories
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children:
+                skillCategories.keys.map((category) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(category),
+                      selected: _selectedCategory == category,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedCategory = selected ? category : null;
+                        });
+                      },
+                      selectedColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.2),
+                      checkmarkColor: Theme.of(context).colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color:
+                            _selectedCategory == category
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.black87,
+                        fontWeight:
+                            _selectedCategory == category
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Selected Category Skills with Lazy Loading
+        if (_selectedCategory != null) ...[
+          FutureBuilder<List<String>>(
+            future: Future.delayed(
+              const Duration(milliseconds: 300),
+              () => skillCategories[_selectedCategory]!,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    snapshot.data!.map((skill) {
+                      return FilterChip(
+                        label: Text(skill),
+                        selected: _selectedSkills.contains(skill),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedSkills.add(skill);
+                            } else {
+                              _selectedSkills.remove(skill);
+                            }
+                            _updateProgress();
+                          });
+                        },
+                        selectedColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.2),
+                        checkmarkColor: Theme.of(context).colorScheme.primary,
+                        labelStyle: TextStyle(
+                          color:
+                              _selectedSkills.contains(skill)
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.black87,
+                          fontWeight:
+                              _selectedSkills.contains(skill)
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                        ),
+                      );
+                    }).toList(),
+              );
+            },
+          ),
+        ],
+
+        // Languages Section
+        const SizedBox(height: 32),
+        Text(
+          'Languages',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Add languages you are proficient in',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 16),
+
+        // Predefined Languages
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              [
+                'English',
+                'Spanish',
+                'French',
+                'German',
+                'Chinese',
+                'Japanese',
+                'Korean',
+                'Russian',
+                'Arabic',
+                'Hindi',
+                'Portuguese',
+                'Italian',
+                'Dutch',
+                'Swedish',
+                'Turkish',
+              ].map((language) {
+                return FilterChip(
+                  label: Text(language),
+                  selected: _selectedLanguages.contains(language),
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedLanguages.add(language);
+                      } else {
+                        _selectedLanguages.remove(language);
+                      }
+                      _updateProgress();
+                    });
+                  },
+                  selectedColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.2),
+                  checkmarkColor: Theme.of(context).colorScheme.primary,
+                  labelStyle: TextStyle(
+                    color:
+                        _selectedLanguages.contains(language)
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.black87,
+                    fontWeight:
+                        _selectedLanguages.contains(language)
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                  ),
+                );
+              }).toList(),
+        ),
+
+        // Dedicated Custom Language Input Bar
+        const SizedBox(height: 16),
+        TextField(
+          controller: _newLanguageController,
+          decoration: InputDecoration(
+            hintText: 'Enter a custom language',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _addLanguage,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+          onSubmitted: (_) => _addLanguage(),
+        ),
+        const SizedBox(height: 16),
+
+        // Selected Languages Display
+        if (_selectedLanguages.isNotEmpty) ...[
+          Text(
+            'Selected Languages',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                _selectedLanguages.map((language) {
+                  return Chip(
+                    label: Text(language),
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedLanguages.remove(language);
+                        _updateProgress();
+                      });
+                    },
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }).toList(),
+          ),
+        ],
       ],
     );
   }
@@ -1272,6 +1574,17 @@ class _ResumeFormState extends State<ResumeForm>
     }
   }
 
+  void _addLanguage() {
+    final newLanguage = _newLanguageController.text.trim();
+    if (newLanguage.isNotEmpty && !_selectedLanguages.contains(newLanguage)) {
+      setState(() {
+        _selectedLanguages.add(newLanguage);
+        _newLanguageController.clear();
+        _updateProgress();
+      });
+    }
+  }
+
   // Helper method to update progress
   void _updateProgress() {
     setState(() {
@@ -1312,6 +1625,17 @@ class _ResumeFormState extends State<ResumeForm>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Resume Title Field
+          _buildTextFormField(
+            controller: _titleController,
+            label: 'Resume Title',
+            hintText: 'Enter a title for your resume',
+            isRequired: true,
+            prefixIcon: Icons.title,
+            autofocus: false,
+            onChanged: (_) => _updateProgress(),
+          ),
+          const SizedBox(height: 16),
           _buildSectionHeader(
             title: 'Personal Information',
             subtitle: 'Enter your basic details to get started',
@@ -1417,5 +1741,10 @@ class _ResumeFormState extends State<ResumeForm>
         child: content,
       ),
     );
+  }
+
+  bool _validateCurrentStep() {
+    // Implement validation logic for the current step
+    return true; // Placeholder, actual implementation needed
   }
 }

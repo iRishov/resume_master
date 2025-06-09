@@ -263,10 +263,10 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     if (score >= 90) return Icons.workspace_premium;
     if (score >= 80) return Icons.star;
     if (score >= 70) return Icons.emoji_events;
-    if (score >= 60) return Icons.construction;
-    if (score >= 50) return Icons.school;
-    if (score >= 40) return Icons.flag;
-    return Icons.warning;
+    if (score >= 60) return Icons.school;
+    if (score >= 50) return Icons.flag;
+    if (score >= 40) return Icons.rocket_launch;
+    return Icons.auto_awesome;
   }
 
   Future<void> _deleteResume(Map<String, dynamic> resume) async {
@@ -770,29 +770,10 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              InkWell(
-                                onTap: () => _editResumeTitle(resume),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        resume['title'] ?? 'Untitled Resume',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.edit_outlined,
-                                      size: 16,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary.withOpacity(0.6),
-                                    ),
-                                  ],
-                                ),
+                              Text(
+                                resume['title'] ?? 'Untitled Resume',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -917,7 +898,12 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         icon: const Icon(Icons.add),
         label: const Text('Create New Resume'),
         style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -1075,7 +1061,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           children: [
                             _buildBadgeInfo(
-                              'Resume Master',
+                              'Resume Champion',
                               'Score: 90-100%',
                               Icons.workspace_premium,
                               const Color(0xFF1B5E20),
@@ -1083,7 +1069,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Resume Expert',
+                              'Resume Star',
                               'Score: 80-89%',
                               Icons.star,
                               const Color(0xFF2E7D32),
@@ -1091,7 +1077,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Resume Pro',
+                              'Resume Builder',
                               'Score: 70-79%',
                               Icons.emoji_events,
                               const Color(0xFF43A047),
@@ -1099,33 +1085,33 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Resume Builder',
+                              'Resume Learner',
                               'Score: 60-69%',
-                              Icons.construction,
+                              Icons.school,
                               const Color(0xFFF57F17),
                               'Good resume with room for improvement',
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Resume Learner',
+                              'Resume Starter',
                               'Score: 50-59%',
-                              Icons.school,
+                              Icons.flag,
                               const Color(0xFFE65100),
                               'Basic resume that needs significant improvements',
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Resume Starter',
+                              'Getting Started',
                               'Score: 40-49%',
-                              Icons.flag,
+                              Icons.rocket_launch,
                               const Color(0xFFD84315),
                               'Initial resume that needs major improvements',
                             ),
                             const SizedBox(height: 12),
                             _buildBadgeInfo(
-                              'Needs Work',
+                              'Begin Your Journey',
                               'Score: Below 40%',
-                              Icons.warning,
+                              Icons.auto_awesome,
                               const Color(0xFFB71C1C),
                               'Resume requires complete revision',
                             ),
@@ -1582,88 +1568,5 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
-
-  Future<void> _editResumeTitle(Map<String, dynamic> resume) async {
-    final TextEditingController titleController = TextEditingController(
-      text: resume['title'] ?? 'Untitled Resume',
-    );
-
-    final result = await showDialog<String>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.edit_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Edit Title'),
-                  ],
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.title),
-                  ),
-                  autofocus: true,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed:
-                    () => Navigator.of(context).pop(titleController.text),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-    );
-
-    if (result != null && result != resume['title']) {
-      try {
-        await _firestore.collection('resumes').doc(resume['id']).update({
-          'title': result,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Resume title updated successfully'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
-          // Reload resumes to update the UI
-          await _loadResumes();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating title: ${e.toString()}'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      }
-    }
   }
 }

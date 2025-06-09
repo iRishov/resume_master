@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 class ResumeScoringService {
-  // Scoring weights for different sections
+  // Scoring weights for different sections - adjusted for freshers
   static const Map<String, double> _sectionWeights = {
-    'personalInfo': 0.10,
-    'summary': 0.15,
-    'education': 0.15,
-    'experience': 0.25,
-    'skills': 0.15,
-    'projects': 0.10,
-    'certifications': 0.05,
-    'atsCompatibility': 0.05,
+    'personalInfo': 0.15, // Increased weight for basic info
+    'summary': 0.15, // Kept same for good summary
+    'education': 0.25, // Increased weight for freshers
+    'experience': 0.15, // Reduced weight for freshers
+    'skills': 0.15, // Kept same for skills
+    'projects': 0.10, // Kept same for projects
+    'certifications': 0.05, // Kept same for certifications
+    'atsCompatibility': 0.05, // Kept same for ATS
   };
 
   // Minimum requirements for each section
@@ -24,80 +24,45 @@ class ResumeScoringService {
     'certifications': ['name', 'organization', 'year'],
   };
 
-  // ATS-friendly keywords by industry
+  // ATS-friendly keywords by industry - updated for entry-level positions
   static const Map<String, List<String>> _atsKeywords = {
     'technical': [
-      'Python',
-      'Java',
-      'JavaScript',
-      'React',
-      'Node.js',
-      'SQL',
-      'AWS',
-      'Docker',
-      'Kubernetes',
-      'Git',
-      'CI/CD',
-      'Agile',
-      'Scrum',
-      'DevOps',
-      'Microservices',
-      'TypeScript',
-      'Angular',
-      'Vue.js',
-      'MongoDB',
-      'PostgreSQL',
-      'REST API',
-      'GraphQL',
-      'Machine Learning',
-      'AI',
-      'Cloud Computing',
-      'Azure',
-      'GCP',
-      'Linux',
-      'Shell Scripting',
+      // Programming Languages
+      'Python', 'Java', 'JavaScript', 'HTML', 'CSS', 'SQL',
+      // Web Development
+      'React', 'Node.js', 'Bootstrap', 'jQuery', 'REST API',
+      // Tools & Platforms
+      'Git', 'GitHub', 'VS Code', 'Eclipse', 'IntelliJ',
+      // Basic Cloud
+      'AWS', 'Azure', 'Google Cloud',
+      // Basic DevOps
+      'Docker', 'CI/CD', 'Jenkins',
+      // Basic Database
+      'MySQL', 'MongoDB', 'PostgreSQL',
+      // Basic Testing
+      'JUnit', 'Selenium', 'TestNG',
+      // Basic Security
+      'OAuth', 'SSL', 'HTTPS',
     ],
     'business': [
-      'Project Management',
-      'Strategic Planning',
-      'Business Development',
-      'Marketing',
-      'Sales',
-      'Customer Relations',
-      'Financial Analysis',
-      'Budget Management',
-      'Team Leadership',
-      'Stakeholder Management',
-      'Market Research',
-      'Business Strategy',
-      'Risk Management',
-      'Process Improvement',
-      'Data Analysis',
-      'Business Intelligence',
-      'CRM',
-      'ERP',
-      'Supply Chain',
-      'Operations Management',
+      // Basic Business Skills
+      'Microsoft Office', 'Excel', 'PowerPoint', 'Word',
+      'Project Management', 'Team Collaboration',
+      'Communication', 'Problem Solving', 'Time Management',
+      'Customer Service', 'Data Entry', 'Report Writing',
+      'Research', 'Analysis', 'Documentation',
+      'Meeting Management', 'Email Communication',
+      'Organization', 'Attention to Detail',
     ],
     'design': [
-      'UI/UX Design',
-      'Adobe Creative Suite',
-      'Figma',
-      'Sketch',
-      'Wireframing',
-      'Prototyping',
-      'Visual Design',
-      'Typography',
-      'Color Theory',
-      'Responsive Design',
-      'User Research',
-      'Interaction Design',
-      'Information Architecture',
-      'Design Systems',
-      'Illustration',
-      'Motion Graphics',
-      '3D Modeling',
-      'Brand Identity',
+      // Basic Design Tools
+      'Adobe Photoshop', 'Adobe Illustrator', 'Figma',
+      'Canva', 'Sketch', 'InDesign',
+      // Basic Design Skills
+      'UI Design', 'UX Design', 'Wireframing',
+      'Typography', 'Color Theory', 'Layout Design',
+      'Visual Design', 'Responsive Design',
+      'Design Principles', 'User Research',
     ],
   };
 
@@ -680,12 +645,12 @@ class ResumeScoringService {
     double totalScore = 0.0;
     final skillCount = skills.length;
 
-    // Base score based on number of skills
-    if (skillCount < 5) {
+    // Updated scoring for freshers - more reasonable skill count expectations
+    if (skillCount < 3) {
       totalScore = 0.3;
-    } else if (skillCount < 10) {
+    } else if (skillCount < 5) {
       totalScore = 0.6;
-    } else if (skillCount < 15) {
+    } else if (skillCount < 8) {
       totalScore = 0.8;
     } else {
       totalScore = 1.0;
@@ -702,10 +667,10 @@ class ResumeScoringService {
       }
     }
 
-    // Bonus for technical skills
-    if (technicalSkillCount >= 5) {
+    // Updated bonus for technical skills - more reasonable expectations
+    if (technicalSkillCount >= 3) {
       totalScore += 0.2;
-    } else if (technicalSkillCount >= 3) {
+    } else if (technicalSkillCount >= 1) {
       totalScore += 0.1;
     }
 
@@ -720,8 +685,8 @@ class ResumeScoringService {
       }
     }
 
-    // Bonus for soft skills
-    if (softSkillCount >= 3) {
+    // Updated bonus for soft skills - more reasonable expectations
+    if (softSkillCount >= 2) {
       totalScore += 0.1;
     }
 
@@ -1247,18 +1212,20 @@ class ResumeScoringService {
     List<String> strengths,
   ) {
     if (skills == null || skills.isEmpty) {
-      suggestions.add('Let\'s add your skills to showcase your capabilities!');
+      suggestions.add(
+        'Start by adding your key skills to showcase your capabilities!',
+      );
       return;
     }
 
     final skillCount = skills.length;
-    if (skillCount < 5) {
+    if (skillCount < 3) {
       suggestions.add(
-        'You\'ve started listing your skills! Consider adding more (aim for 10-15) to better represent your capabilities',
+        'Great start! Consider adding a few more skills (aim for 5-8) to better represent your capabilities',
       );
-    } else if (skillCount > 15) {
+    } else if (skillCount > 8) {
       strengths.add(
-        'Excellent! Your comprehensive skills list demonstrates broad expertise. Great job!',
+        'Excellent! Your comprehensive skills list demonstrates good expertise. Great job!',
       );
     } else {
       strengths.add(
@@ -1292,11 +1259,11 @@ class ResumeScoringService {
       );
     if (!hasTechnical)
       suggestions.add(
-        'Consider adding technical skills relevant to your industry to improve ATS compatibility',
+        'Consider adding basic technical skills relevant to your field to improve ATS compatibility',
       );
     if (!hasSoft)
       suggestions.add(
-        'Think about including soft skills like communication and leadership to show your well-rounded abilities',
+        'Think about including soft skills like communication and teamwork to show your well-rounded abilities',
       );
   }
 
@@ -1780,7 +1747,9 @@ class ResumeScoringService {
   }
 
   // Calculate average score for a list of resumes
-  Map<String, dynamic> calculateAverageScore(List<Map<String, dynamic>> resumes) {
+  Map<String, dynamic> calculateAverageScore(
+    List<Map<String, dynamic>> resumes,
+  ) {
     double totalScore = 0;
     double highestScore = 0;
     String highestBadge = 'Resume Starter';
@@ -1790,7 +1759,8 @@ class ResumeScoringService {
     for (var resume in resumes) {
       try {
         final scoreResult = calculateScore(resume);
-        final sectionScores = scoreResult['sectionScores'] as Map<String, dynamic>;
+        final sectionScores =
+            scoreResult['sectionScores'] as Map<String, dynamic>;
 
         // Calculate average of section scores
         double sectionAverage = 0.0;
@@ -1801,39 +1771,40 @@ class ResumeScoringService {
             sectionCount++;
           }
         }
-        final averageScore = sectionCount > 0 ? (sectionAverage / sectionCount) * 100 : 0.0;
+        final averageScore =
+            sectionCount > 0 ? (sectionAverage / sectionCount) * 100 : 0.0;
         totalScore += averageScore;
 
         // Track highest score and badge
         if (averageScore > highestScore) {
           highestScore = averageScore;
           if (averageScore >= 90) {
-            highestBadge = 'Resume Master';
+            highestBadge = 'Resume Champion';
             highestBadgeIcon = Icons.workspace_premium;
             highestBadgeColor = const Color(0xFF1B5E20);
           } else if (averageScore >= 80) {
-            highestBadge = 'Resume Expert';
+            highestBadge = 'Resume Star';
             highestBadgeIcon = Icons.star;
             highestBadgeColor = const Color(0xFF2E7D32);
           } else if (averageScore >= 70) {
-            highestBadge = 'Resume Pro';
+            highestBadge = 'Resume Builder';
             highestBadgeIcon = Icons.emoji_events;
             highestBadgeColor = const Color(0xFF43A047);
           } else if (averageScore >= 60) {
-            highestBadge = 'Resume Builder';
-            highestBadgeIcon = Icons.construction;
-            highestBadgeColor = const Color(0xFFF57F17);
-          } else if (averageScore >= 50) {
             highestBadge = 'Resume Learner';
             highestBadgeIcon = Icons.school;
-            highestBadgeColor = const Color(0xFFE65100);
-          } else if (averageScore >= 40) {
+            highestBadgeColor = const Color(0xFFF57F17);
+          } else if (averageScore >= 50) {
             highestBadge = 'Resume Starter';
             highestBadgeIcon = Icons.flag;
+            highestBadgeColor = const Color(0xFFE65100);
+          } else if (averageScore >= 40) {
+            highestBadge = 'Getting Started';
+            highestBadgeIcon = Icons.rocket_launch;
             highestBadgeColor = const Color(0xFFD84315);
           } else {
-            highestBadge = 'Needs Work';
-            highestBadgeIcon = Icons.warning;
+            highestBadge = 'Begin Your Journey';
+            highestBadgeIcon = Icons.auto_awesome;
             highestBadgeColor = const Color(0xFFB71C1C);
           }
         }

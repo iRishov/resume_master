@@ -8,6 +8,7 @@ import 'package:resume_master/services/auth_service.dart';
 import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:vibration/vibration.dart';
 
 class RecruiterSignUp extends StatefulWidget {
   const RecruiterSignUp({super.key});
@@ -120,33 +121,93 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
     }
   }
 
-  void _handleSignup() async {
+  void _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
       try {
+        // First check if email is already registered
+        final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
+          _emailController.text.trim(),
+        );
+        if (methods.isNotEmpty) {
+          if (!mounted) return;
+          _showMessage(
+            'This email is already registered. Please use the login page instead.',
+            false,
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
         await _authService.signUpUser(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
-          company: _companyController.text.trim(),
           phone: _phoneController.text.trim(),
-          position: _positionController.text.trim(),
           role: 'recruiter',
+          company: _companyController.text.trim(),
+          position: _positionController.text.trim(),
           showMessage: (message, isSuccess) {
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(message),
-                backgroundColor: isSuccess ? Colors.green : Colors.red,
+                content: Text(
+                  message,
+                  style: TextStyle(
+                    color: isSuccess ? Colors.green : Colors.red,
+                    fontSize: 16,
+                  ),
+                ),
+                backgroundColor: Colors.white,
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             );
           },
-          onSuccess: () {
+          onSuccess: () async {
+            if (!mounted) return;
+
+            // Verify role after signup
+            final user = _authService.currentUser;
+            if (user != null) {
+              final userDoc =
+                  await _firestore.collection('users').doc(user.uid).get();
+              if (userDoc.exists) {
+                final role = userDoc.data()?['role'] as String?;
+                if (role != 'recruiter') {
+                  // If role is not recruiter, sign out and show error
+                  await _authService.signOut();
+                  if (!mounted) return;
+                  _showMessage(
+                    'Error: Invalid role assignment. Please try again.',
+                    false,
+                  );
+                  return;
+                }
+              }
+            }
+
+            // Provide haptic feedback for successful signup
+            if (await Vibration.hasVibrator()) {
+              Vibration.vibrate(duration: 50);
+            }
+
+            if (!mounted) return;
             Navigator.pushReplacementNamed(context, '/recruiter-home');
           },
         );
+      } catch (e) {
+        if (!mounted) return;
+        _showMessage(e.toString(), false);
       } finally {
         if (mounted) {
           setState(() {
@@ -169,370 +230,374 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
               position: _slideAnimation,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Create Recruiter Account',
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Join our platform to find the best talent',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Create Recruiter Account',
+                        style: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.8),
+                        ).textTheme.displayLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Sign Up Form
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              labelText: 'Full Name',
-                              hintText: 'Enter your full name',
-                              prefixIcon: Icon(
-                                Icons.person_outline,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your name';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _companyController,
-                            decoration: InputDecoration(
-                              labelText: 'Company Name',
-                              hintText: 'Enter your company name',
-                              prefixIcon: Icon(
-                                Icons.business_outlined,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your company name';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _positionController,
-                            decoration: InputDecoration(
-                              labelText: 'Position',
-                              hintText: 'Enter your position',
-                              prefixIcon: Icon(
-                                Icons.work_outline,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your position';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _phoneController,
-                            decoration: InputDecoration(
-                              labelText: 'Phone Number',
-                              hintText: 'Enter your phone number',
-                              prefixIcon: Icon(
-                                Icons.phone_outlined,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your phone number';
-                              }
-                              // Basic phone number validation
-                              if (!RegExp(
-                                r'^\+?[\d\s-]{10,}$',
-                              ).hasMatch(value)) {
-                                return 'Please enter a valid phone number';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _emailController,
-                            decoration: InputDecoration(
-                              labelText: 'Company Email',
-                              hintText: 'Enter your company email',
-                              prefixIcon: Icon(
-                                Icons.email_outlined,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!RegExp(
-                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                              ).hasMatch(value)) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _passwordController,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              hintText: 'Create a password',
-                              prefixIcon: Icon(
-                                Icons.lock_outline,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
-                                  });
-                                },
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            obscureText: !_isPasswordVisible,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter a password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _handleSignup,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child:
-                                _isLoading
-                                    ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
-                                    : const Text(
-                                      'Create Account',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                          ),
-                        ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sign up to start posting jobs and finding talent',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.8),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Already have an account? ',
-                          style: TextStyle(
+                      const SizedBox(height: 48),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          hintText: 'Enter your full name',
+                          prefixIcon: Icon(
+                            Icons.person_outline,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.6),
                           ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your name';
+                          }
+                          if (value.length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: 'Company Email',
+                          hintText: 'Enter your company email',
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: Theme.of(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const RecruiterLogin(),
-                              ),
-                            );
-                          },
-                          child: const Text('Sign In'),
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
                         ),
-                      ],
-                    ),
-                  ],
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Please enter a valid email address';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _companyController,
+                        decoration: InputDecoration(
+                          labelText: 'Company Name',
+                          hintText: 'Enter your company name',
+                          prefixIcon: Icon(
+                            Icons.business_outlined,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your company name';
+                          }
+                          if (value.length < 2) {
+                            return 'Company name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _positionController,
+                        decoration: InputDecoration(
+                          labelText: 'Position',
+                          hintText: 'Enter your position in the company',
+                          prefixIcon: Icon(
+                            Icons.work_outline,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your position';
+                          }
+                          if (value.length < 2) {
+                            return 'Position must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number',
+                          hintText: 'Enter your phone number',
+                          prefixIcon: Icon(
+                            Icons.phone_outlined,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your phone number';
+                          }
+                          if (!RegExp(r'^\+?[\d\s-]{10,}$').hasMatch(value)) {
+                            return 'Please enter a valid phone number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor:
+                              Theme.of(context).colorScheme.surfaceVariant,
+                        ),
+                        obscureText: !_isPasswordVisible,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSignUp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            elevation: 4,
+                          ),
+                          child:
+                              _isLoading
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : const Text(
+                                    'Sign Up',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Already have an account? ',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const RecruiterLogin(),
+                                ),
+                              );
+                            },
+                            child: const Text('Sign In'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -6,16 +6,17 @@ import 'package:resume_master/screens/user/home.dart';
 import 'package:resume_master/services/auth_service.dart' as auth;
 import 'package:resume_master/services/database.dart';
 import 'package:resume_master/services/firebase_service.dart';
+import 'package:vibration/vibration.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // Custom exception class for auth errors
 class AuthException implements Exception {
   final String message;
-  final String code;
+  final String? code;
   final dynamic originalError;
 
-  AuthException(this.message, {this.code = 'unknown', this.originalError});
+  AuthException(this.message, {this.code, this.originalError});
 
   @override
   String toString() => message;
@@ -79,21 +80,61 @@ class AuthService {
     required VoidCallback onSuccess,
   }) async {
     try {
-      // Input validation
+      // Enhanced input validation
+      if (email.trim().isEmpty) {
+        throw AuthException('Email is required', code: 'missing-email');
+      }
+
+      if (password.trim().isEmpty) {
+        throw AuthException('Password is required', code: 'missing-password');
+      }
+
+      if (name.trim().isEmpty) {
+        throw AuthException('Name is required', code: 'missing-name');
+      }
+
+      if (phone.trim().isEmpty) {
+        throw AuthException('Phone number is required', code: 'missing-phone');
+      }
+
+      // Email format validation
       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
         throw AuthException(
           'Please enter a valid email address',
-          code: 'invalid-email',
+          code: 'invalid-email-format',
         );
       }
 
+      // Password strength validation
       if (password.length < 6) {
         throw AuthException(
           'Password must be at least 6 characters long',
-          code: 'weak-password',
+          code: 'password-too-short',
         );
       }
 
+      if (!RegExp(r'[A-Z]').hasMatch(password)) {
+        throw AuthException(
+          'Password must contain at least one uppercase letter',
+          code: 'password-no-uppercase',
+        );
+      }
+
+      if (!RegExp(r'[a-z]').hasMatch(password)) {
+        throw AuthException(
+          'Password must contain at least one lowercase letter',
+          code: 'password-no-lowercase',
+        );
+      }
+
+      if (!RegExp(r'[0-9]').hasMatch(password)) {
+        throw AuthException(
+          'Password must contain at least one number',
+          code: 'password-no-number',
+        );
+      }
+
+      // Name validation
       if (name.trim().length < 2) {
         throw AuthException(
           'Name must be at least 2 characters long',
@@ -101,16 +142,22 @@ class AuthService {
         );
       }
 
-      if (phone.trim().isEmpty) {
-        throw AuthException('Phone number is required', code: 'missing-phone');
+      if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(name)) {
+        throw AuthException(
+          'Name can only contain letters and spaces',
+          code: 'invalid-name-format',
+        );
       }
+
+      // Phone number validation
       if (!RegExp(r'^\+?[\d\s-]{10,}$').hasMatch(phone)) {
         throw AuthException(
-          'Please enter a valid phone number',
+          'Please enter a valid phone number (minimum 10 digits)',
           code: 'invalid-phone',
         );
       }
 
+      // Role-specific validation
       if (role == 'recruiter') {
         if (company == null || company.trim().isEmpty) {
           throw AuthException(
@@ -118,13 +165,44 @@ class AuthService {
             code: 'missing-company',
           );
         }
+
+        if (company.trim().length < 2) {
+          throw AuthException(
+            'Company name must be at least 2 characters long',
+            code: 'invalid-company',
+          );
+        }
+
         if (position == null || position.trim().isEmpty) {
           throw AuthException(
             'Position is required for recruiters',
             code: 'missing-position',
           );
         }
+
+        if (position.trim().length < 2) {
+          throw AuthException(
+            'Position must be at least 2 characters long',
+            code: 'invalid-position',
+          );
+        }
       }
+
+      // Check if email already exists
+      try {
+        final methods = await _auth.fetchSignInMethodsForEmail(email);
+        if (methods.isNotEmpty) {
+          throw AuthException(
+            'An account already exists with this email. Please use the login page instead.',
+            code: 'email-already-in-use',
+          );
+        }
+      } catch (e) {
+        if (e is AuthException) rethrow;
+        // Ignore other errors and proceed with signup
+      }
+
+      showMessage('Creating your account...', true);
 
       // Create user in Firebase Auth
       final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -134,7 +212,7 @@ class AuthService {
 
       if (userCredential.user == null) {
         throw AuthException(
-          'Failed to create user account',
+          'Failed to create account. Please try again.',
           code: 'user-creation-failed',
         );
       }
@@ -154,7 +232,12 @@ class AuthService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      showMessage('Account created successfully!', true);
+      // Provide haptic feedback for successful signup
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 50);
+      }
+
+      showMessage('Account created successfully! Welcome aboard!', true);
       onSuccess();
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred';
@@ -163,19 +246,22 @@ class AuthService {
       switch (e.code) {
         case 'weak-password':
           message =
-              'The password provided is too weak. Please use a stronger password.';
+              'The password is too weak. Please use a stronger password with uppercase, lowercase, and numbers.';
           break;
         case 'email-already-in-use':
           message =
-              'An account already exists for that email. Please use a different email or try logging in.';
+              'An account already exists with this email. Please use the login page instead.';
           break;
         case 'invalid-email':
-          message =
-              'The email address is not valid. Please check and try again.';
+          message = 'Please enter a valid email address.';
           break;
         case 'operation-not-allowed':
           message =
               'Email/password accounts are not enabled. Please contact support.';
+          break;
+        case 'network-request-failed':
+          message =
+              'Network error. Please check your internet connection and try again.';
           break;
         default:
           message = 'An error occurred during sign up: ${e.message}';
@@ -190,7 +276,7 @@ class AuthService {
     } on AuthException {
       rethrow;
     } catch (e) {
-      final message = 'Unexpected error: $e';
+      final message = 'An unexpected error occurred. Please try again.';
       showMessage(message, false);
       throw AuthException(message);
     }
@@ -201,12 +287,29 @@ class AuthService {
     required String password,
     required Function(String, bool) showMessage,
     required VoidCallback onSuccess,
+    String? expectedRole,
   }) async {
     try {
-      if (email.trim().isEmpty || password.trim().isEmpty) {
+      // Enhanced input validation
+      if (email.trim().isEmpty) {
+        throw AuthException('Email is required', code: 'missing-email');
+      }
+
+      if (password.trim().isEmpty) {
+        throw AuthException('Password is required', code: 'missing-password');
+      }
+
+      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
         throw AuthException(
-          'Email and password are required',
-          code: 'missing-credentials',
+          'Please enter a valid email address',
+          code: 'invalid-email-format',
+        );
+      }
+
+      if (password.length < 6) {
+        throw AuthException(
+          'Password must be at least 6 characters long',
+          code: 'password-too-short',
         );
       }
 
@@ -229,60 +332,77 @@ class AuthService {
 
         if (!userData.exists) {
           await _auth.signOut();
-          throw AuthException('User data not found', code: 'user-not-found');
+          throw AuthException(
+            'Account not found. Please sign up first.',
+            code: 'user-not-found',
+          );
         }
 
         final role = userData.data()?['role'];
         if (role == null) {
           await _auth.signOut();
-          throw AuthException('Invalid account type', code: 'invalid-role');
+          throw AuthException(
+            'Invalid account type. Please contact support.',
+            code: 'invalid-role',
+          );
         }
 
-        showMessage('Logged in successfully!', true);
+        // Check if user is trying to login with correct role
+        if (expectedRole != null && role != expectedRole) {
+          await _auth.signOut();
+          throw AuthException(
+            role == 'recruiter'
+                ? 'This is a recruiter account. Please use the recruiter login page.'
+                : 'This is a job seeker account. Please use the job seeker login page.',
+            code: 'wrong-role',
+          );
+        }
+
+        // Provide haptic feedback for successful login
+        if (await Vibration.hasVibrator()) {
+          Vibration.vibrate(duration: 50);
+        }
+
+        showMessage('Welcome back! Logging you in...', true);
         onSuccess();
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'too-many-requests') {
-          // Handle rate limiting
-          throw AuthException(
-            'Too many login attempts. Please try again later.',
-            code: e.code,
-            originalError: e,
-          );
-        } else if (e.code == 'network-request-failed') {
-          // Handle network issues
-          throw AuthException(
-            'Network error. Please check your internet connection.',
-            code: e.code,
-            originalError: e,
-          );
-        } else {
-          // Handle other auth errors
-          String message = 'An error occurred';
-          switch (e.code) {
-            case 'user-not-found':
-              message =
-                  'No user found for that email. Please check your email or sign up.';
-              break;
-            case 'wrong-password':
-              message = 'Wrong password. Please try again.';
-              break;
-            case 'invalid-email':
-              message = 'The email address is not valid.';
-              break;
-            case 'user-disabled':
-              message =
-                  'This account has been disabled. Please contact support.';
-              break;
-            default:
-              message = 'An error occurred during login: ${e.message}';
-          }
-          throw AuthException(message, code: e.code, originalError: e);
+        String message;
+        switch (e.code) {
+          case 'user-not-found':
+            message =
+                'No account found with this email. Please check your email or sign up.';
+            break;
+          case 'wrong-password':
+            message =
+                'Incorrect password. Please try again or use "Forgot Password" if you need help.';
+            break;
+          case 'invalid-email':
+            message = 'Please enter a valid email address.';
+            break;
+          case 'user-disabled':
+            message =
+                'This account has been disabled. Please contact support for assistance.';
+            break;
+          case 'too-many-requests':
+            message =
+                'Too many login attempts. Please try again in a few minutes or reset your password.';
+            break;
+          case 'network-request-failed':
+            message =
+                'Network error. Please check your internet connection and try again.';
+            break;
+          default:
+            message = 'Login failed: ${e.message}';
         }
+        showMessage(message, false);
+        throw AuthException(message, code: e.code, originalError: e);
       }
     } on AuthException {
       rethrow;
     } catch (e) {
-      throw AuthException('Unexpected error during login: $e');
+      final message = 'An unexpected error occurred. Please try again.';
+      showMessage(message, false);
+      throw AuthException(message);
     }
   }
 
@@ -325,74 +445,173 @@ class AuthService {
     }
   }
 
-  Future<User?> signInWithGoogle() async {
+  Future<UserCredential> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
       if (googleUser == null) {
-        throw AuthException('Google sign in was cancelled', code: 'cancelled');
+        throw AuthException('Google sign in was cancelled');
       }
 
+      // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+
+      // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      // Sign in to Firebase with the Google credential
       final userCredential = await _auth.signInWithCredential(credential);
-      if (userCredential.user == null) {
-        throw AuthException(
-          'Failed to sign in with Google',
-          code: 'sign-in-failed',
-        );
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw AuthException('Failed to sign in with Google');
       }
 
-      final userDoc =
-          await _firestore
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .get();
+      // Check if user exists in Firestore
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
 
       if (!userDoc.exists) {
-        // Create new user document with job seeker role
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'name': userCredential.user!.displayName ?? 'User',
-          'email': userCredential.user!.email,
+        // Show dialog to collect additional required information
+        final context = navigatorKey.currentContext;
+        if (context == null) {
+          throw AuthException('Context not available');
+        }
+
+        // Create controllers for the form
+        final nameController = TextEditingController(
+          text: user.displayName ?? '',
+        );
+        final phoneController = TextEditingController();
+
+        // Show dialog to collect required information
+        final result = await showDialog<Map<String, String>>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Complete Your Profile'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name',
+                        hintText: 'Enter your full name',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number',
+                        hintText: 'Enter your phone number',
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (nameController.text.trim().isNotEmpty &&
+                        phoneController.text.trim().isNotEmpty) {
+                      Navigator.of(context).pop({
+                        'name': nameController.text.trim(),
+                        'phone': phoneController.text.trim(),
+                      });
+                    }
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (result == null) {
+          await _auth.signOut();
+          throw AuthException('Profile completion cancelled');
+        }
+
+        // Create new user document with job_seeker role and collected information
+        await _firestore.collection('users').doc(user.uid).set({
+          'name': result['name'],
+          'email': user.email,
+          'phone': result['phone'],
           'role': 'job_seeker',
-          'phone': '',
+          'photoUrl': user.photoURL,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-          'photoURL': userCredential.user!.photoURL,
         });
       } else {
         // Check if existing user is a job seeker
-        final role = userDoc.data()?['role'];
-        if (role != 'job_seeker') {
+        final userData = userDoc.data();
+        if (userData == null || userData['role'] != 'job_seeker') {
+          // Sign out if not a job seeker
           await _auth.signOut();
           throw AuthException(
-            'Please use the recruiter login',
-            code: 'invalid-role',
+            'Google sign in is only available for job seekers. Please use email/password login for recruiters.',
           );
         }
       }
 
-      return userCredential.user;
+      // Provide haptic feedback for successful Google sign-in
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 50);
+      }
+
+      return userCredential;
     } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        'Google sign in failed: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } on FirebaseException catch (e) {
-      throw AuthException(
-        'Database error: ${e.message}',
-        code: e.code,
-        originalError: e,
-      );
-    } on AuthException {
-      rethrow;
+      String message;
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          message =
+              'An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.';
+          break;
+        case 'invalid-credential':
+          message = 'The credential is invalid or has expired.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Google sign in is not enabled. Please contact support.';
+          break;
+        case 'user-disabled':
+          message = 'This user account has been disabled.';
+          break;
+        case 'user-not-found':
+          message = 'No user found with this email.';
+          break;
+        case 'wrong-password':
+          message = 'Wrong password provided.';
+          break;
+        case 'invalid-verification-code':
+          message = 'The verification code is invalid.';
+          break;
+        case 'invalid-verification-id':
+          message = 'The verification ID is invalid.';
+          break;
+        default:
+          message =
+              'An error occurred during Google sign in. Please try again.';
+      }
+      throw AuthException(message);
     } catch (e) {
-      throw AuthException('Unexpected error during Google sign in: $e');
+      throw AuthException(
+        'An unexpected error occurred during Google sign in: ${e.toString()}',
+      );
     }
   }
 
