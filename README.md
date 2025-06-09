@@ -19,6 +19,204 @@ Resume Master is a comprehensive resume building and optimization platform that 
 - Responsive Design: Adapts to different screen sizes and orientations
 - Offline Support: Basic functionality available without internet connection
 
+## Detailed Features
+
+### Resume Building
+
+- **Smart Templates**: Professionally designed templates optimized for different industries
+- **Real-time Validation**: Instant feedback on content quality and completeness
+- **Section Management**: Easy organization of resume sections with drag-and-drop functionality
+- **Rich Text Editor**: Format text with various styles and bullet points
+- **Media Integration**: Add profile pictures and portfolio links
+- **Auto-save**: Automatic saving of resume progress
+
+### Resume Scoring System
+
+- **ATS Compatibility**: Analyzes resume for Applicant Tracking System compatibility
+- **Content Quality**: Evaluates content relevance and impact
+- **Keyword Optimization**: Suggests relevant keywords for target positions
+- **Format Analysis**: Checks for proper formatting and structure
+- **Grammar & Spelling**: Real-time grammar and spelling checks
+- **Industry-specific Scoring**: Custom scoring based on industry standards
+- **Action Verb Analysis**: Identifies and suggests powerful action verbs
+- **Quantitative Impact**: Evaluates the use of metrics and achievements
+
+### Database Structure
+
+#### Firebase Collections
+
+1. **Users Collection**
+
+```json
+{
+  "uid": "string",
+  "email": "string",
+  "displayName": "string",
+  "photoURL": "string",
+  "createdAt": "timestamp",
+  "lastLogin": "timestamp",
+  "preferences": {
+    "theme": "string",
+    "notifications": "boolean"
+  }
+}
+```
+
+2. **Resumes Collection**
+
+```json
+{
+  "resumeId": "string",
+  "userId": "string",
+  "title": "string",
+  "template": "string",
+  "personalInfo": {
+    "name": "string",
+    "email": "string",
+    "phone": "string",
+    "location": "string",
+    "linkedin": "string",
+    "website": "string"
+  },
+  "summary": "string",
+  "skills": ["string"],
+  "experiences": [
+    {
+      "id": "string",
+      "jobTitle": "string",
+      "company": "string",
+      "startDate": "timestamp",
+      "endDate": "timestamp",
+      "isCurrent": "boolean",
+      "description": "string",
+      "achievements": ["string"]
+    }
+  ],
+  "education": [
+    {
+      "id": "string",
+      "degree": "string",
+      "institution": "string",
+      "fieldOfStudy": "string",
+      "startDate": "timestamp",
+      "endDate": "timestamp",
+      "grade": "string"
+    }
+  ],
+  "projects": [
+    {
+      "id": "string",
+      "title": "string",
+      "description": "string",
+      "technologies": ["string"],
+      "url": "string",
+      "startDate": "timestamp",
+      "endDate": "timestamp"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "string",
+      "name": "string",
+      "organization": "string",
+      "issueDate": "timestamp",
+      "expiryDate": "timestamp",
+      "credentialId": "string",
+      "url": "string"
+    }
+  ],
+  "languages": [
+    {
+      "language": "string",
+      "proficiency": "string"
+    }
+  ],
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp",
+  "score": {
+    "atsScore": "number",
+    "contentScore": "number",
+    "formatScore": "number",
+    "overallScore": "number",
+    "suggestions": ["string"]
+  }
+}
+```
+
+3. **Templates Collection**
+
+```json
+{
+  "templateId": "string",
+  "name": "string",
+  "category": "string",
+  "thumbnail": "string",
+  "structure": {
+    "sections": ["string"],
+    "layout": "string",
+    "style": "string"
+  },
+  "isPremium": "boolean"
+}
+```
+
+4. **Scores Collection**
+
+```json
+{
+  "scoreId": "string",
+  "resumeId": "string",
+  "userId": "string",
+  "timestamp": "timestamp",
+  "metrics": {
+    "atsCompatibility": "number",
+    "contentQuality": "number",
+    "formatScore": "number",
+    "keywordDensity": "number",
+    "grammarScore": "number"
+  },
+  "suggestions": [
+    {
+      "type": "string",
+      "message": "string",
+      "priority": "string",
+      "section": "string"
+    }
+  ],
+  "improvementHistory": [
+    {
+      "timestamp": "timestamp",
+      "previousScore": "number",
+      "newScore": "number",
+      "changes": ["string"]
+    }
+  ]
+}
+```
+
+### Security Rules
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    match /resumes/{resumeId} {
+      allow read, write: if request.auth.uid == resource.data.userId;
+    }
+    match /templates/{templateId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /scores/{scoreId} {
+      allow read, write: if request.auth.uid == resource.data.userId;
+    }
+  }
+}
+```
+
 ## Tech Stack
 
 - Frontend: Flutter framework

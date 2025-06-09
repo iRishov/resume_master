@@ -68,7 +68,7 @@ class _SplashState extends State<Splash> {
       ),
       splashIconSize: 500,
       backgroundColor: Colors.white,
-      duration: 2000,
+      duration: 1000,
       splashTransition: SplashTransition.fadeTransition,
       animationDuration: const Duration(milliseconds: 2000),
       curve: Curves.easeInOut,
