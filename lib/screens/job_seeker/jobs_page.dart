@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
 import 'package:resume_master/theme/page_transitions.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
+import 'package:resume_master/screens/job_seeker/profile_page.dart';
+import 'package:resume_master/screens/job_seeker/resume_score.dart';
 
 class JobsPage extends StatefulWidget {
   const JobsPage({super.key});
@@ -782,307 +785,352 @@ class _JobsPageState extends State<JobsPage> {
   }
 
   void _onNavTap(int index) {
-    setState(() => _currentIndex = index);
+    if (index == _currentIndex) return; // Don't navigate if already on the tab
+
+    setState(() {
+      _currentIndex = index;
+    });
+
     switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/home');
+      case 0: // Home
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
         break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/scores');
+      case 1: // Scores
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const ResumeScore()),
+        );
         break;
-      case 2:
+      case 2: // Jobs
         // Already on jobs page
         break;
-      case 3:
-        Navigator.pushReplacementNamed(context, '/profile');
+      case 3: // Profile
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const ProfilePage()),
+        );
         break;
     }
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update current index based on route
+    final route = ModalRoute.of(context)?.settings.name;
+    if (route != null) {
+      switch (route) {
+        case '/home':
+          _currentIndex = 0;
+          break;
+        case '/scores':
+          _currentIndex = 1;
+          break;
+        case '/jobs':
+          _currentIndex = 2;
+          break;
+        case '/profile':
+          _currentIndex = 3;
+          break;
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
-            ),
-          ),
-        ),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Find Jobs',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'CrimsonText',
-            color: Colors.white,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _showFilterDialog,
-            tooltip: 'Filter Jobs',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search jobs...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                    _filteredJobs = _getFilteredJobs();
-                  });
-                },
+    return WillPopScope(
+      onWillPop: () async {
+        // Navigate back to home page
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          toolbarHeight: 70,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                ],
               ),
             ),
-            Expanded(
-              child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _filteredJobs.isEmpty
-                      ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.work_outline,
-                              size: 64,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.4),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No Jobs Found',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.headlineSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Try adjusting your filters or search',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyLarge?.copyWith(
+          ),
+          title: const Text(
+            'Jobs',
+            style: TextStyle(
+              fontFamily: 'CrimsonText',
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 35,
+            ),
+          ),
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _loadInitialJobs,
+              tooltip: 'Refresh',
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search jobs...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                      _filteredJobs = _getFilteredJobs();
+                    });
+                  },
+                ),
+              ),
+              Expanded(
+                child:
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _filteredJobs.isEmpty
+                        ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                size: 64,
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                                ).colorScheme.onSurface.withOpacity(0.4),
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                      : RefreshIndicator(
-                        onRefresh: _refreshJobs,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount:
-                              _filteredJobs.length + (_isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _filteredJobs.length) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: CircularProgressIndicator(),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No Jobs Found',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineSmall?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              );
-                            }
-
-                            final job = _filteredJobs[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: InkWell(
-                                onTap: () => _showJobDetails(job),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  job['title'] ??
-                                                      'Untitled Job',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleLarge
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  job['recruiter']?['companyName'] ??
-                                                      'Company Name',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium
-                                                      ?.copyWith(
-                                                        color: Colors.grey[600],
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(
-                                                context,
-                                              ).primaryColor.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              job['type'] ?? 'Full-time',
-                                              style: TextStyle(
-                                                color:
-                                                    Theme.of(
-                                                      context,
-                                                    ).primaryColor,
-                                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: 8),
+                              Text(
+                                'Try adjusting your filters or search',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        : RefreshIndicator(
+                          onRefresh: _refreshJobs,
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount:
+                                _filteredJobs.length + (_isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _filteredJobs.length) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+
+                              final job = _filteredJobs[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: InkWell(
+                                  onTap: () => _showJobDetails(job),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    job['title'] ??
+                                                        'Untitled Job',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleLarge
+                                                        ?.copyWith(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    job['recruiter']?['companyName'] ??
+                                                        'Company Name',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium
+                                                        ?.copyWith(
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.location_on_outlined,
-                                            size: 16,
-                                            color: Colors.grey[600],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            job['location'] ??
-                                                'Location not specified',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(
+                                                  context,
+                                                ).primaryColor.withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                job['type'] ?? 'Full-time',
+                                                style: TextStyle(
+                                                  color:
+                                                      Theme.of(
+                                                        context,
+                                                      ).primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Icon(
-                                            Icons.work_outline,
-                                            size: 16,
-                                            color: Colors.grey[600],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            job['experienceLevel'] ??
-                                                'Entry Level',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (job['salary'] != null) ...[
-                                        const SizedBox(height: 8),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
                                         Row(
                                           children: [
                                             Icon(
-                                              Icons.attach_money,
+                                              Icons.location_on_outlined,
                                               size: 16,
                                               color: Colors.grey[600],
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              job['salary']!,
+                                              job['location'] ??
+                                                  'Location not specified',
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Icon(
+                                              Icons.work_outline,
+                                              size: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              job['experienceLevel'] ??
+                                                  'Entry Level',
                                               style: TextStyle(
                                                 color: Colors.grey[600],
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed:
-                                                () => _showJobDetails(job),
-                                            child: const Text('View Details'),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton(
-                                            onPressed:
-                                                () => _showApplyDialog(job),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  Theme.of(
-                                                    context,
-                                                  ).primaryColor,
-                                              foregroundColor: Colors.white,
-                                            ),
-                                            child: const Text('Apply Now'),
+                                        if (job['salary'] != null) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.attach_money,
+                                                size: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                job['salary']!,
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
-                                      ),
-                                    ],
+                                        const SizedBox(height: 16),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
+                                          children: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => _showJobDetails(job),
+                                              child: const Text('View Details'),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            ElevatedButton(
+                                              onPressed:
+                                                  () => _showApplyDialog(job),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Theme.of(
+                                                      context,
+                                                    ).primaryColorDark,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              child: const Text('Apply Now'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: _onNavTap,
+        ),
       ),
     );
   }

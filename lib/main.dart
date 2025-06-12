@@ -3,12 +3,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:resume_master/screens/splash.dart';
 import 'package:resume_master/screens/startup.dart';
-import 'package:resume_master/screens/user/login.dart';
-import 'package:resume_master/screens/user/signup.dart';
-import 'package:resume_master/screens/user/home.dart';
-import 'package:resume_master/screens/user/resume_score_screen.dart';
-import 'package:resume_master/screens/user/jobs_page.dart';
-import 'package:resume_master/screens/user/profile_page.dart';
+import 'package:resume_master/screens/job_seeker/login.dart';
+import 'package:resume_master/screens/job_seeker/signup.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
+import 'package:resume_master/screens/job_seeker/resume_score.dart';
+import 'package:resume_master/screens/job_seeker/jobs_page.dart';
+import 'package:resume_master/screens/job_seeker/profile_page.dart';
 import 'package:resume_master/screens/recruiter/recruiter_login.dart';
 import 'package:resume_master/screens/recruiter/recruiter_signup.dart';
 import 'package:resume_master/screens/recruiter/recruiter_home.dart';
@@ -36,7 +36,7 @@ void main() async {
   } else {
     // Mobile/Desktop initialization
     await Firebase.initializeApp();
-    print('Running on Mobile/Desktop platform');
+    print('Running on Mobile platform');
   }
 
   runApp(const MyApp());
@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
         '/recruiter-profile': (context) => const RecruiterProfile(),
         '/job-posting': (context) => const JobPostingPage(),
         '/home': (context) => const Home(),
-        '/scores': (context) => const ResumeScoreScreen(),
+        '/scores': (context) => const ResumeScore(),
         '/jobs': (context) => const JobsPage(),
         '/profile': (context) => const ProfilePage(),
       },

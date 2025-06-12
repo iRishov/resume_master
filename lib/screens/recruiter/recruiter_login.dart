@@ -7,8 +7,9 @@ import 'package:resume_master/screens/recruiter/recruiter_home.dart';
 import 'package:resume_master/services/auth_service.dart';
 import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/theme/app_theme.dart';
+import 'package:resume_master/theme/page_transitions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:resume_master/screens/user/forgot_password.dart';
+import 'package:resume_master/screens/job_seeker/forgot_password.dart';
 import 'package:vibration/vibration.dart';
 
 class RecruiterLogin extends StatefulWidget {
@@ -94,7 +95,10 @@ class _RecruiterLoginState extends State<RecruiterLogin>
           final role = userDoc.data()?['role'] as String?;
           if (role == 'recruiter') {
             if (mounted) {
-              Navigator.pushReplacementNamed(context, '/recruiter-home');
+              Navigator.pushReplacement(
+                context,
+                slidePageRouteBuilder(const RecruiterHomePage()),
+              );
             }
           } else {
             if (mounted) {
@@ -171,7 +175,10 @@ class _RecruiterLoginState extends State<RecruiterLogin>
                     Vibration.vibrate(duration: 50);
                   }
                   if (!mounted) return;
-                  Navigator.pushReplacementNamed(context, '/recruiter-home');
+                  Navigator.pushReplacement(
+                    context,
+                    slidePageRouteBuilder(const RecruiterHomePage()),
+                  );
                 }
               }
             }

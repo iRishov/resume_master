@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:resume_master/screens/user/home.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
 import 'package:resume_master/services/auth_service.dart' as auth;
 import 'package:resume_master/services/database.dart';
 import 'package:resume_master/services/firebase_service.dart';

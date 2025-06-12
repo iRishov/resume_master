@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:resume_master/screens/user/home.dart';
-import 'package:resume_master/screens/user/login.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
+import 'package:resume_master/screens/job_seeker/login.dart';
 import 'package:resume_master/services/auth_service.dart';
 import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/theme/app_theme.dart';

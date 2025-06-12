@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:resume_master/screens/user/home.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:resume_master/widgets/form_fields.dart';
 import 'package:resume_master/models/experience.dart';
@@ -252,9 +252,59 @@ class _ResumeFormState extends State<ResumeForm>
 
   // Save handler
   Future<void> _handleFormSubmit() async {
+    if (_isLoading) return;
+
+    // Validate all required fields before saving
     if (!_validateCurrentStep()) {
       return;
     }
+
+    // Additional validation for education before final save
+    if (_education.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Education information is required. Please add at least one education entry.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Navigate to education step
+      setState(() {
+        _currentStep = 3; // Education step index
+      });
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      return;
+    }
+
+    // Validate education entries
+    for (var edu in _education) {
+      if (edu.degree.isEmpty || edu.institution.isEmpty || edu.year.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please complete all education entries with degree, institution, and year',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        // Navigate to education step
+        setState(() {
+          _currentStep = 3; // Education step index
+        });
+        _pageController.animateToPage(
+          _currentStep,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
     try {
       final user = _auth.currentUser;
@@ -578,13 +628,19 @@ class _ResumeFormState extends State<ResumeForm>
   }
 
   Widget _buildNavigationButtons() {
+    bool canProceed = true;
+    if (_currentStep == 3) {
+      // Education step
+      canProceed = _isEducationComplete;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -594,70 +650,56 @@ class _ResumeFormState extends State<ResumeForm>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (_currentStep > 0)
-            Tooltip(
-              message: 'Previous Step',
-              child: ElevatedButton.icon(
-                onPressed: _previousStep,
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Previous'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                ),
-              ),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _currentStep--;
+                });
+                _pageController.animateToPage(
+                  _currentStep,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Previous'),
             )
           else
             const SizedBox(width: 100),
-          Tooltip(
-            message:
-                _currentStep == _totalSteps - 1 ? 'Save Resume' : 'Next Step',
-            child: ElevatedButton.icon(
-              onPressed:
-                  _isLoading
-                      ? null
-                      : (_currentStep == _totalSteps - 1
-                          ? _handleFormSubmit
-                          : _nextStep),
-              icon:
-                  _isLoading
-                      ? Container(
-                        width: 24,
-                        height: 24,
-                        padding: const EdgeInsets.all(4.0),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : Icon(
-                        _currentStep == _totalSteps - 1
-                            ? Icons.save
-                            : Icons.arrow_forward,
-                      ),
-              label:
-                  _isLoading
-                      ? const Text('Saving...')
-                      : Text(
-                        _currentStep == _totalSteps - 1
-                            ? 'Save Resume'
-                            : 'Next',
-                      ),
+          if (_currentStep < _totalSteps - 1)
+            ElevatedButton.icon(
+              onPressed: canProceed ? _nextStep : null,
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Next'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+                  horizontal: 24,
                   vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: canProceed ? _handleFormSubmit : null,
+              icon: const Icon(Icons.save),
+              label: const Text('Save Resume'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -714,6 +756,7 @@ class _ResumeFormState extends State<ResumeForm>
     int? maxLines,
     Function(String?)? onChanged,
     bool autofocus = false,
+    bool capitalizeFirstLetter = true,
   }) {
     return TextFormField(
       controller: controller,
@@ -742,13 +785,16 @@ class _ResumeFormState extends State<ResumeForm>
       keyboardType: keyboardType,
       readOnly: readOnly,
       onTap: onTap,
+      textCapitalization: TextCapitalization.sentences,
       validator: (value) {
         if (isRequired && (value == null || value.isEmpty)) {
           return 'This field is required';
         }
         return null;
       },
-      onChanged: onChanged,
+      onChanged: (value) {
+        onChanged?.call(value);
+      },
       autofocus: autofocus,
       textInputAction:
           maxLines == null ? TextInputAction.next : TextInputAction.newline,
@@ -841,7 +887,7 @@ class _ResumeFormState extends State<ResumeForm>
                   Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Tips for Fresh Graduates',
+                    'Tips for Fresher',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontWeight: FontWeight.bold,
@@ -919,10 +965,39 @@ class _ResumeFormState extends State<ResumeForm>
       children: [
         _buildSectionHeader(
           title: 'Education',
-          subtitle: 'Add your educational background',
+          subtitle: 'Add your educational background (Required)',
           icon: Icons.school,
         ),
         const SizedBox(height: 24),
+        if (_education.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red[700],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Education information is required. Please add at least one education entry.',
+                    style: TextStyle(
+                      color: Colors.red[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
         ...List.generate(_education.length, (index) {
           return EducationCard(
             education: _education[index],
@@ -1094,6 +1169,7 @@ class _ResumeFormState extends State<ResumeForm>
             filled: true,
             fillColor: Colors.grey[50],
           ),
+          textCapitalization: TextCapitalization.sentences,
           onSubmitted: (_) => _addSkill(),
         ),
         const SizedBox(height: 24),
@@ -1345,6 +1421,7 @@ class _ResumeFormState extends State<ResumeForm>
             filled: true,
             fillColor: Colors.grey[50],
           ),
+          textCapitalization: TextCapitalization.sentences,
           onSubmitted: (_) => _addLanguage(),
         ),
         const SizedBox(height: 16),
@@ -1597,7 +1674,14 @@ class _ResumeFormState extends State<ResumeForm>
 
       _isExperienceComplete = _experiences.isNotEmpty;
 
-      _isEducationComplete = _education.isNotEmpty;
+      _isEducationComplete =
+          _education.isNotEmpty &&
+          _education.every(
+            (edu) =>
+                edu.degree.isNotEmpty &&
+                edu.institution.isNotEmpty &&
+                edu.year.isNotEmpty,
+          );
 
       _isSkillsComplete = _selectedSkills.isNotEmpty;
 
@@ -1605,7 +1689,6 @@ class _ResumeFormState extends State<ResumeForm>
 
       _isCertificationsComplete = _certifications.isNotEmpty;
 
-      // ignore: unused_local_variable
       int completedSections = 0;
       if (_isPersonalInfoComplete) completedSections++;
       if (_isSummaryComplete) completedSections++;
@@ -1625,7 +1708,6 @@ class _ResumeFormState extends State<ResumeForm>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Resume Title Field
           _buildTextFormField(
             controller: _titleController,
             label: 'Resume Title',
@@ -1633,6 +1715,7 @@ class _ResumeFormState extends State<ResumeForm>
             isRequired: true,
             prefixIcon: Icons.title,
             autofocus: false,
+            capitalizeFirstLetter: true,
             onChanged: (_) => _updateProgress(),
           ),
           const SizedBox(height: 16),
@@ -1649,6 +1732,7 @@ class _ResumeFormState extends State<ResumeForm>
             isRequired: true,
             prefixIcon: Icons.person_outline,
             autofocus: false,
+            capitalizeFirstLetter: true,
             onChanged: (_) => _updateProgress(),
           ),
           const SizedBox(height: 16),
@@ -1677,27 +1761,17 @@ class _ResumeFormState extends State<ResumeForm>
             label: 'Address',
             hintText: 'Enter your address',
             prefixIcon: Icons.location_on_outlined,
+            capitalizeFirstLetter: true,
             onChanged: (_) => _updateProgress(),
           ),
           const SizedBox(height: 16),
           _buildTextFormField(
             controller: _dobController,
             label: 'Date of Birth',
-            hintText: 'Select your date of birth',
+            hintText: 'DD/MM/YYYY',
             prefixIcon: Icons.calendar_today_outlined,
             readOnly: true,
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-              );
-              if (date != null) {
-                _dobController.text = '${date.day}/${date.month}/${date.year}';
-                _updateProgress();
-              }
-            },
+            onTap: () => _selectDate(context),
             onChanged: (_) => _updateProgress(),
           ),
           const SizedBox(height: 16),
@@ -1706,6 +1780,7 @@ class _ResumeFormState extends State<ResumeForm>
             label: 'Nationality',
             hintText: 'Enter your nationality',
             prefixIcon: Icons.public_outlined,
+            capitalizeFirstLetter: true,
             onChanged: (_) => _updateProgress(),
           ),
           const SizedBox(height: 16),
@@ -1744,7 +1819,82 @@ class _ResumeFormState extends State<ResumeForm>
   }
 
   bool _validateCurrentStep() {
-    // Implement validation logic for the current step
-    return true; // Placeholder, actual implementation needed
+    switch (_currentStep) {
+      case 0: // Personal Info
+        if (_fullNameController.text.isEmpty ||
+            _emailController.text.isEmpty ||
+            _phoneController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please fill in all required personal information fields',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 3: // Education
+        if (_education.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Education information is required. Please add at least one education entry.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return false;
+        }
+        // Check if all education entries are complete
+        for (var edu in _education) {
+          if (edu.degree.isEmpty ||
+              edu.institution.isEmpty ||
+              edu.year.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please complete all education entries with degree, institution, and year',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return false;
+          }
+        }
+        return true;
+      default:
+        return true;
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _dobController.text =
+            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+        _updateProgress();
+      });
+    }
   }
 }

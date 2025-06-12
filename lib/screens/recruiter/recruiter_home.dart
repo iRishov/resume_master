@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:resume_master/screens/recruiter/job_posting_page.dart';
 import 'package:resume_master/screens/recruiter/job_applications_page.dart';
+import 'package:resume_master/screens/recruiter/recruiter_profile.dart';
 import 'package:resume_master/theme/page_transitions.dart';
+import 'package:resume_master/theme/app_theme.dart';
 
 class RecruiterHomePage extends StatefulWidget {
   const RecruiterHomePage({super.key});
@@ -12,7 +14,8 @@ class RecruiterHomePage extends StatefulWidget {
   State<RecruiterHomePage> createState() => _RecruiterHomePageState();
 }
 
-class _RecruiterHomePageState extends State<RecruiterHomePage> {
+class _RecruiterHomePageState extends State<RecruiterHomePage>
+    with TickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _activeJobs = 0;
@@ -22,11 +25,75 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
   String? _position;
   bool _isLoading = true;
 
+  // Animation controllers
+  late AnimationController _headerAnimationController;
+  late AnimationController _statsAnimationController;
+  late AnimationController _actionsAnimationController;
+  late AnimationController _jobsAnimationController;
+
+  // Animations
+  late Animation<double> _headerFadeAnimation;
+  late Animation<double> _statsFadeAnimation;
+  late Animation<double> _actionsFadeAnimation;
+  late Animation<double> _jobsFadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _loadUserData();
     _loadStats();
+  }
+
+  void _initializeAnimations() {
+    // Header animation
+    _headerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _headerFadeAnimation = CurvedAnimation(
+      parent: _headerAnimationController,
+      curve: Curves.easeIn,
+    );
+
+    // Stats animation
+    _statsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _statsFadeAnimation = CurvedAnimation(
+      parent: _statsAnimationController,
+      curve: Curves.easeIn,
+    );
+
+    // Actions animation
+    _actionsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _actionsFadeAnimation = CurvedAnimation(
+      parent: _actionsAnimationController,
+      curve: Curves.easeIn,
+    );
+
+    // Jobs animation
+    _jobsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _jobsFadeAnimation = CurvedAnimation(
+      parent: _jobsAnimationController,
+      curve: Curves.easeIn,
+    );
+  }
+
+  @override
+  void dispose() {
+    _headerAnimationController.dispose();
+    _statsAnimationController.dispose();
+    _actionsAnimationController.dispose();
+    _jobsAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -34,19 +101,165 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
       final user = _auth.currentUser;
       if (user != null) {
         final doc = await _firestore.collection('users').doc(user.uid).get();
-        if (doc.exists) {
+        if (doc.exists && mounted) {
           setState(() {
             _recruiterName = doc.data()?['name'] ?? 'Recruiter';
             _organization = doc.data()?['company'] ?? 'Organization';
             _position = doc.data()?['position'] ?? 'Position';
             _isLoading = false;
           });
+          if (mounted) {
+            _startAnimations();
+          }
         }
       }
     } catch (e) {
       print('Error loading user data: $e');
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  void _startAnimations() {
+    if (!mounted) return;
+
+    _headerAnimationController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      _statsAnimationController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      _actionsAnimationController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      _jobsAnimationController.forward();
+    });
+  }
+
+  Widget _buildAnimatedHeader() {
+    return FadeTransition(
+      opacity: _headerFadeAnimation,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _recruiterName ?? 'Recruiter',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${_position ?? ''} at ${_organization ?? ''}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FadeTransition(opacity: _statsFadeAnimation, child: _buildStatsCard()),
+        const SizedBox(height: 24),
+        FadeTransition(
+          opacity: _actionsFadeAnimation,
+          child: _buildActionButtons(),
+        ),
+        const SizedBox(height: 24),
+        FadeTransition(opacity: _jobsFadeAnimation, child: _buildRecentJobs()),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _refreshData,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      automaticallyImplyLeading: false,
+                      expandedHeight: 140,
+                      pinned: true,
+                      floating: false,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      flexibleSpace: FlexibleSpaceBar(
+                        titlePadding: const EdgeInsets.only(
+                          left: 16,
+                          bottom: 16,
+                        ),
+                        title:
+                            _isLoading
+                                ? const SizedBox.shrink()
+                                : _buildAnimatedHeader(),
+                        background: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Theme.of(context).colorScheme.primary,
+                                Theme.of(context).primaryColorDark,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 28,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'Refresh',
+                          onPressed: _refreshData,
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.person_outline,
+                            size: 28,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'View Profile',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              slidePageRouteBuilder(const RecruiterProfile()),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: _buildAnimatedContent(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+    );
   }
 
   Future<void> _loadStats() async {
@@ -109,116 +322,6 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
     await Future.wait([_loadUserData(), _loadStats()]);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                onRefresh: _refreshData,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      automaticallyImplyLeading: false,
-                      expandedHeight: 140,
-                      pinned: true,
-                      floating: false,
-                      backgroundColor: Theme.of(context).primaryColor,
-                      flexibleSpace: FlexibleSpaceBar(
-                        titlePadding: const EdgeInsets.only(
-                          left: 16,
-                          bottom: 16,
-                        ),
-                        title:
-                            _isLoading
-                                ? const SizedBox.shrink()
-                                : Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _recruiterName ?? 'Recruiter',
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                        color: Colors.white,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${_position ?? ''} at ${_organization ?? ''}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white70,
-                                        letterSpacing: 0.3,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  ],
-                                ),
-                        background: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Theme.of(context).primaryColor,
-                                Theme.of(context).primaryColorDark,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                        ),
-                      ),
-                      actions: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.refresh,
-                            size: 28,
-                            color: Colors.white,
-                          ),
-                          tooltip: 'Refresh',
-                          onPressed: _refreshData,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.person_outline,
-                            size: 28,
-                            color: Colors.white,
-                          ),
-                          tooltip: 'View Profile',
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/recruiter-profile');
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildStatsCard(),
-                            const SizedBox(height: 24),
-                            _buildActionButtons(),
-                            const SizedBox(height: 24),
-                            _buildRecentJobs(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-    );
-  }
-
   Widget _buildStatsCard() {
     return Card(
       elevation: 4,
@@ -228,8 +331,8 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Dashboard Overview',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ' Overview',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 16),
             Row(
@@ -281,65 +384,78 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 60,
-            child: _buildActionButton(
-              'Post New Job',
-              Icons.add_circle_outline,
-              () {
-                Navigator.push(
-                  context,
-                  fadePageRouteBuilder(const JobPostingPage()),
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: SizedBox(
-            height: 60,
-            child: _buildActionButton(
-              'View Applications',
-              Icons.people_outline,
-              () {
-                Navigator.push(
-                  context,
-                  fadePageRouteBuilder(
-                    JobApplicationsPage(jobId: '', jobTitle: 'All Jobs'),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildActionButton(
     String label,
     IconData icon,
     VoidCallback onPressed,
   ) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 16),
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomRight,
+          end: Alignment.topLeft,
+          colors: [
+            Theme.of(context).primaryColorDark.withOpacity(0.9),
+            Theme.of(context).colorScheme.primary,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 28),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          alignment: Alignment.center,
+        ),
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        _buildActionButton('Post New Job', Icons.add_circle_outline, () {
+          Navigator.push(
+            context,
+            slidePageRouteBuilder(const JobPostingPage()),
+          );
+        }),
+        const SizedBox(height: 16),
+        _buildActionButton('View Applications', Icons.people_outline, () {
+          Navigator.push(
+            context,
+            slidePageRouteBuilder(
+              JobApplicationsPage(jobId: '', jobTitle: 'All Applications'),
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -459,7 +575,7 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            fadePageRouteBuilder(const JobPostingPage()),
+                            slidePageRouteBuilder(const JobPostingPage()),
                           ).then((_) => _loadStats());
                         },
                         style: ElevatedButton.styleFrom(
@@ -529,7 +645,7 @@ class _RecruiterHomePageState extends State<RecruiterHomePage> {
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      fadePageRouteBuilder(
+                                      slidePageRouteBuilder(
                                         JobPostingPage(jobId: job.id),
                                       ),
                                     ).then((_) => _loadStats());

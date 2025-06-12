@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // Primary colors
   static const Color primaryColor = Color(0xFFE65100); // Deep Orange
+  static const Color primaryColordark = Colors.blue;
+  // Deep Orange
   static const Color secondaryColor = Color(0xFFFF9800); // Orange
   static const Color accentColor = Color(0xFFffb74d); // Light Orange
 
@@ -21,8 +23,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.light(
-        primary: const Color.fromARGB(255, 44, 32, 219), // Dark blue
-        secondary: const Color.fromARGB(255, 32, 110, 212), // Indigo
+        primary: const Color.fromARGB(255, 0, 0, 0), // Dark blue
+        secondary: const Color.fromARGB(255, 255, 255, 255), // Indigo
         surface: Colors.white,
         background: const Color(0xFFF5F5F5), // Light grey background
         error: Colors.red.shade400,

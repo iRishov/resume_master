@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:resume_master/screens/user/resume_preview.dart';
+import 'package:resume_master/screens/job_seeker/resume_preview.dart';
 import 'package:resume_master/models/resume.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
 import 'package:resume_master/theme/page_transitions.dart';
@@ -703,10 +703,32 @@ class _JobApplicationsPageState extends State<JobApplicationsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Applications'),
+        toolbarHeight: 70,
+        title: Text(
+          'Applications',
+          style: const TextStyle(
+            fontFamily: 'CrimsonText',
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 30,
+          ),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).primaryColorDark,
+                Theme.of(context).colorScheme.primary,
+              ],
+            ),
+          ),
+        ),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadApplications,
           ),
         ],

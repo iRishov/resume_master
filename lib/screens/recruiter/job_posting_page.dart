@@ -215,7 +215,31 @@ class _JobPostingPageState extends State<JobPostingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Job' : 'Post a Job')),
+      appBar: AppBar(
+        toolbarHeight: 70,
+        title: Text(
+          _isEditing ? 'Edit Job' : 'Post a Job',
+          style: const TextStyle(
+            fontFamily: 'CrimsonText',
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 30,
+          ),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).primaryColorDark,
+                Theme.of(context).colorScheme.primary,
+              ],
+            ),
+          ),
+        ),
+        elevation: 0,
+      ),
       body:
           _isLoading && _isEditing
               ? const Center(child: CircularProgressIndicator())
@@ -241,6 +265,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                         ),
                       TextFormField(
                         controller: _titleController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Job Title',
                           prefixIcon: const Icon(Icons.work_outline),
@@ -260,6 +286,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _companyController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Company Name',
                           prefixIcon: const Icon(Icons.business),
@@ -279,6 +307,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _locationController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Location',
                           prefixIcon: const Icon(Icons.location_on_outlined),
@@ -391,6 +421,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _salaryController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Salary Range',
                           prefixIcon: const Icon(Icons.attach_money),
@@ -410,6 +442,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _descriptionController,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.next,
                         maxLines: 5,
                         decoration: InputDecoration(
                           labelText: 'Job Description',
@@ -430,6 +464,8 @@ class _JobPostingPageState extends State<JobPostingPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _requirementsController,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.done,
                         maxLines: 5,
                         decoration: InputDecoration(
                           labelText: 'Requirements',

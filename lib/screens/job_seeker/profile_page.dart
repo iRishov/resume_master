@@ -8,11 +8,12 @@ import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
 import 'package:resume_master/services/resume_scoring_service.dart';
 import 'package:resume_master/services/auth_service.dart';
-import 'package:resume_master/screens/user/resume_preview.dart';
-import 'package:resume_master/screens/user/resume_score_screen.dart';
-import 'package:resume_master/screens/user/home.dart';
+import 'package:resume_master/screens/job_seeker/resume_preview.dart';
+import 'package:resume_master/screens/job_seeker/resume_score.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
 import 'package:resume_master/theme/page_transitions.dart';
 import 'package:intl/intl.dart';
+import 'package:resume_master/screens/job_seeker/jobs_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -200,42 +201,72 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
-            tooltip: 'Sign Out',
+    return WillPopScope(
+      onWillPop: () async {
+        // Navigate back to home page
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          toolbarHeight: 70,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                onRefresh: _loadUserData,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildUserDetails(),
-                        const SizedBox(height: 24),
-                        _buildResumeSection(),
-                        const SizedBox(height: 24),
-                        _buildApplicationsSection(),
-                      ],
+          title: const Text(
+            'Profile',
+            style: TextStyle(
+              fontFamily: 'CrimsonText',
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 30,
+            ),
+          ),
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: _handleLogout,
+              tooltip: 'Logout',
+            ),
+          ],
+        ),
+        body:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                  onRefresh: _loadUserData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildUserDetails(),
+                          const SizedBox(height: 24),
+                          _buildResumeSection(),
+                          const SizedBox(height: 24),
+                          _buildApplicationsSection(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: _onNavTap,
+        ),
       ),
     );
   }
@@ -492,24 +523,56 @@ class _ProfilePageState extends State<ProfilePage> {
   void _onNavTap(int index) {
     if (index == _currentIndex) return; // Don't navigate if already on the tab
 
-    setState(() => _currentIndex = index);
+    setState(() {
+      _currentIndex = index;
+    });
+
     switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/home');
+      case 0: // Home
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
         break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/scores');
+      case 1: // Scores
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const ResumeScore()),
+        );
         break;
-      case 2:
-        Navigator.pushReplacementNamed(context, '/jobs');
+      case 2: // Jobs
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const JobsPage()),
+        );
         break;
-      case 3:
-        // Already on Profile
+      case 3: // Profile
+        // Already on profile page
         break;
     }
   }
 
-  Future<void> _signOut() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update current index based on route
+    final route = ModalRoute.of(context)?.settings.name;
+    if (route != null) {
+      switch (route) {
+        case '/home':
+          _currentIndex = 0;
+          break;
+        case '/scores':
+          _currentIndex = 1;
+          break;
+        case '/jobs':
+          _currentIndex = 2;
+          break;
+        case '/profile':
+          _currentIndex = 3;
+          break;
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder:
@@ -518,37 +581,34 @@ class _ProfilePageState extends State<ProfilePage> {
             content: const Text('Are you sure you want to logout?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('Logout'),
               ),
             ],
           ),
     );
 
-    if (shouldLogout == true && mounted) {
+    if (shouldLogout == true) {
       try {
         await _auth.signOut();
-        if (mounted) {
-          // Clear all navigation stack and go to login
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/startup',
-            (route) => false,
-          );
-        }
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/startup',
+          (route) => false,
+        );
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error logging out: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging out: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -674,8 +734,8 @@ class _ProfilePageState extends State<ProfilePage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _getSectionColor(_averageScore),
-              borderRadius: BorderRadius.circular(8),
+              color: Theme.of(context).secondaryHeaderColor.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(9),
               border: Border.all(color: _getBorderColor(_averageScore)),
             ),
             child: Row(
@@ -683,7 +743,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _highestBadgeColor.withOpacity(0.1),
+                    color: _highestBadgeColor.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -1139,7 +1199,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 if (application['resumeId'] != null)
                                   _buildInfoRow(
                                     Icons.description,
-                                    'Resume: ${application['resumeName'] ?? 'Not specified'}',
+                                    'Resume: ${application['resumeTitle'] ?? 'Not specified'}',
                                   ),
                                 if (application['coverLetter'] != null)
                                   _buildInfoRow(

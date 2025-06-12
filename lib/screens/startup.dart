@@ -1,10 +1,11 @@
 // ignore_for_file: unused_import
 
 import 'package:flutter/material.dart';
-import 'package:resume_master/screens/user/login.dart';
+import 'package:resume_master/screens/job_seeker/login.dart';
 import 'package:resume_master/screens/recruiter/recruiter_login.dart';
 import 'package:resume_master/theme/app_theme.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:resume_master/theme/page_transitions.dart';
 
 class Startup extends StatefulWidget {
   const Startup({super.key});
@@ -47,22 +48,8 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   void _navigateToLogin(bool isRecruiter) {
     Navigator.push(
       context,
-      PageRouteBuilder(
-        pageBuilder:
-            (context, animation, secondaryAnimation) =>
-                isRecruiter ? const RecruiterLogin() : const Login(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.easeInOut;
-          var tween = Tween(
-            begin: begin,
-            end: end,
-          ).chain(CurveTween(curve: curve));
-          var offsetAnimation = animation.drive(tween);
-          return SlideTransition(position: offsetAnimation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 500),
+      slidePageRouteBuilder(
+        isRecruiter ? const RecruiterLogin() : const Login(),
       ),
     );
   }
@@ -72,10 +59,12 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.blue],
+          gradient: RadialGradient(
+            radius: 1.5,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+            ],
           ),
         ),
         child: SafeArea(

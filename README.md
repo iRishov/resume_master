@@ -1,351 +1,384 @@
 # Resume Master
 
-A cross-platform Flutter application designed to help job seekers build, analyze, and optimize their resumes using AI-driven insights and real-time feedback.
+A professional resume creation and management application built with Flutter, featuring both job_seeker and recruiter interfaces.
 
-## Overview
+## Why Use This App?
 
-Resume Master is a comprehensive resume building and optimization platform that helps users create professional resumes with AI-powered insights. The application combines modern technology with user-friendly design to make resume creation and optimization accessible to everyone.
+1. **Professional Resume Creation**
 
-## Key Features
+   - Create ATS-friendly resumes that stand out to employers
+   - Multiple professional templates to choose from
+   - Real-time resume scoring and improvement suggestions
+   - Export to PDF format for easy sharing
 
-- Smart Resume Builder: Create professional resumes with guided templates and real-time suggestions
-- AI-Powered Analysis: Get instant feedback on your resume's ATS compatibility and content quality
-- Multi-Platform Support: Access your resumes from any device (Android, iOS, Web, Windows, macOS)
-- Cloud Storage: Securely store and manage multiple versions of your resumes
-- Export Options: Download resumes in multiple formats (PDF, DOCX)
-- Privacy Focused: Your data is encrypted and stored securely in Firebase
-- Real-time Progress Tracking: Visual indicators for resume completion
-- Smart Keyboard Handling: Optimized form navigation and input experience
-- Responsive Design: Adapts to different screen sizes and orientations
-- Offline Support: Basic functionality available without internet connection
+2. **Career Management**
 
-## Detailed Features
+   - Track your job applications in one place
+   - Receive job recommendations based on your profile
+   - Keep your professional information up-to-date
+   - Manage multiple versions of your resume
 
-### Resume Building
+3. **Recruiter Benefits**
 
-- **Smart Templates**: Professionally designed templates optimized for different industries
-- **Real-time Validation**: Instant feedback on content quality and completeness
-- **Section Management**: Easy organization of resume sections with drag-and-drop functionality
-- **Rich Text Editor**: Format text with various styles and bullet points
-- **Media Integration**: Add profile pictures and portfolio links
-- **Auto-save**: Automatic saving of resume progress
+   - Post job listings with detailed requirements
+   - Access to a pool of qualified candidates
+   - Streamlined application review process
+   - Direct communication with applicants
 
-### Resume Scoring System
+4. **job_seeker-Friendly Interface**
+   - Intuitive design for easy navigation
+   - Step-by-step resume building process
+   - Mobile-first approach for on-the-go updates
+   - Cross-platform availability (Web, Android, iOS)
 
-- **ATS Compatibility**: Analyzes resume for Applicant Tracking System compatibility
-- **Content Quality**: Evaluates content relevance and impact
-- **Keyword Optimization**: Suggests relevant keywords for target positions
-- **Format Analysis**: Checks for proper formatting and structure
-- **Grammar & Spelling**: Real-time grammar and spelling checks
-- **Industry-specific Scoring**: Custom scoring based on industry standards
-- **Action Verb Analysis**: Identifies and suggests powerful action verbs
-- **Quantitative Impact**: Evaluates the use of metrics and achievements
+## Technology Stack
 
-### Database Structure
+- **Framework**: Flutter
+- **Language**: Dart (SDK version >=3.7.2)
+- **Backend**: Firebase
+- **Database**: Cloud Firestore
+- **Authentication**: Firebase Auth
+- **Storage**: Firebase Storage
 
-#### Firebase Collections
+## Features
 
-1. **Users Collection**
+### job_seeker Features
 
-```json
-{
-  "uid": "string",
-  "email": "string",
-  "displayName": "string",
-  "photoURL": "string",
-  "createdAt": "timestamp",
-  "lastLogin": "timestamp",
-  "preferences": {
-    "theme": "string",
-    "notifications": "boolean"
-  }
-}
-```
+1. **Authentication**
 
-2. **Resumes Collection**
+   - Email/Password login
+   - Google Sign-in
+   - Secure job_seeker registration
 
-```json
-{
-  "resumeId": "string",
-  "userId": "string",
-  "title": "string",
-  "template": "string",
-  "personalInfo": {
-    "name": "string",
-    "email": "string",
-    "phone": "string",
-    "location": "string",
-    "linkedin": "string",
-    "website": "string"
-  },
-  "summary": "string",
-  "skills": ["string"],
-  "experiences": [
-    {
-      "id": "string",
-      "jobTitle": "string",
-      "company": "string",
-      "startDate": "timestamp",
-      "endDate": "timestamp",
-      "isCurrent": "boolean",
-      "description": "string",
-      "achievements": ["string"]
-    }
-  ],
-  "education": [
-    {
-      "id": "string",
-      "degree": "string",
-      "institution": "string",
-      "fieldOfStudy": "string",
-      "startDate": "timestamp",
-      "endDate": "timestamp",
-      "grade": "string"
-    }
-  ],
-  "projects": [
-    {
-      "id": "string",
-      "title": "string",
-      "description": "string",
-      "technologies": ["string"],
-      "url": "string",
-      "startDate": "timestamp",
-      "endDate": "timestamp"
-    }
-  ],
-  "certifications": [
-    {
-      "id": "string",
-      "name": "string",
-      "organization": "string",
-      "issueDate": "timestamp",
-      "expiryDate": "timestamp",
-      "credentialId": "string",
-      "url": "string"
-    }
-  ],
-  "languages": [
-    {
-      "language": "string",
-      "proficiency": "string"
-    }
-  ],
-  "createdAt": "timestamp",
-  "updatedAt": "timestamp",
-  "score": {
-    "atsScore": "number",
-    "contentScore": "number",
-    "formatScore": "number",
-    "overallScore": "number",
-    "suggestions": ["string"]
-  }
-}
-```
+2. **Resume Management**
 
-3. **Templates Collection**
+   - Create and edit professional resumes
+   - Multiple resume templates
+   - PDF export functionality
+   - Resume scoring system
 
-```json
-{
-  "templateId": "string",
-  "name": "string",
-  "category": "string",
-  "thumbnail": "string",
-  "structure": {
-    "sections": ["string"],
-    "layout": "string",
-    "style": "string"
-  },
-  "isPremium": "boolean"
-}
-```
+3. **Profile Management**
 
-4. **Scores Collection**
+   - Personal information management
+   - Education history
+   - Work experience
+   - Certifications
+   - Projects
 
-```json
-{
-  "scoreId": "string",
-  "resumeId": "string",
-  "userId": "string",
-  "timestamp": "timestamp",
-  "metrics": {
-    "atsCompatibility": "number",
-    "contentQuality": "number",
-    "formatScore": "number",
-    "keywordDensity": "number",
-    "grammarScore": "number"
-  },
-  "suggestions": [
-    {
-      "type": "string",
-      "message": "string",
-      "priority": "string",
-      "section": "string"
-    }
-  ],
-  "improvementHistory": [
-    {
-      "timestamp": "timestamp",
-      "previousScore": "number",
-      "newScore": "number",
-      "changes": ["string"]
-    }
-  ]
-}
-```
+4. **Job Search**
+   - Browse available jobs
+   - Apply to positions
+   - Track applications
 
-### Security Rules
+### Recruiter Features
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
-    match /resumes/{resumeId} {
-      allow read, write: if request.auth.uid == resource.data.userId;
-    }
-    match /templates/{templateId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    match /scores/{scoreId} {
-      allow read, write: if request.auth.uid == resource.data.userId;
-    }
-  }
-}
-```
+1. **Authentication**
 
-## Tech Stack
+   - Dedicated recruiter login
+   - Secure registration
 
-- Frontend: Flutter framework
-- State Management: Provider
-- Backend: Firebase
-  - Authentication
-  - Cloud Firestore
-  - Storage
-- PDF Generation: pdf package
-- Local Storage: Shared Preferences
-- UI Components: Material Design 3
+2. **Job Management**
 
-## Project Structure
+   - Post new job listings
+   - Edit existing job posts
+   - View applications
+
+3. **Profile Management**
+   - Company information
+   - Recruiter profile settings
+
+## Database Structure
+
+### Collections
+
+1. **Job Seeker**
+
+   - Personal information
+   - Authentication details
+   - Profile settings
+
+2. **Resumes**
+
+   - Personal details
+   - Education history
+   - Work experience
+   - Skills
+   - Certifications
+   - Projects
+
+3. **Jobs**
+
+   - Job title
+   - Company details
+   - Requirements
+   - Location
+   - Salary
+   - Posted date
+
+4. **Applications**
+   - Job reference
+   - Applicant details
+   - Application status
+   - Applied date
+
+## File Structure
 
 ```
 lib/
-├── main.dart                  # Application entry point
-├── screens/                   # UI screens
-│   ├── user/                 # User-facing screens
-│   │   ├── home.dart         # Dashboard
-│   │   ├── profile_page.dart # Profile management
-│   │   ├── resume_form_page.dart # Resume creation/editing
-│   │   ├── resume_preview.dart # Resume preview
-│   │   └── resume_score_screen.dart # Resume analysis
-│   └── auth/                 # Authentication screens
-│       ├── login.dart
-│       ├── signup.dart
-│       └── forgot_password.dart
-├── services/                  # Business logic
-│   ├── firebase_service.dart # Firebase operations
-│   ├── resume_scoring_service.dart # Resume analysis
-│   └── pdf_service.dart      # PDF generation
-├── models/                    # Data models
-│   ├── resume.dart           # Resume model
-│   ├── experience.dart       # Experience model
-│   ├── education.dart        # Education model
-│   ├── project.dart          # Project model
-│   └── certification.dart    # Certification model
-├── widgets/                   # Reusable components
-│   ├── form_fields.dart      # Custom form fields
-│   ├── experience_card.dart  # Experience card
-│   ├── education_card.dart   # Education card
-│   ├── project_card.dart     # Project card
-│   └── certification_card.dart # Certification card
-└── theme/                     # App theming
-    ├── colors.dart
-    └── typography.dart
+├── screens/                    # UI Screens and Pages
+│   ├── splash.dart            # Splash screen with animations
+│   ├── startup.dart           # Initial app screen with job_seeker/recruiter choice
+│   ├── job_seeker/                  # job_seeker-specific screens
+│   │   ├── home.dart         # Main job_seeker dashboard
+│   │   ├── login.dart        # job_seeker authentication
+│   │   ├── signup.dart       # job_seeker registration
+│   │   ├── profile_page.dart # job_seeker profile management
+│   │   └── resume_score.dart # Resume analysis and scoring
+│   └── recruiter/            # Recruiter-specific screens
+│       ├── recruiter_home.dart      # Recruiter dashboard
+│       ├── recruiter_login.dart     # Recruiter authentication
+│       ├── recruiter_signup.dart    # Recruiter registration
+│       ├── recruiter_profile.dart   # Recruiter profile management
+│       └── job_posting_page.dart    # Job posting interface
+│
+├── services/                  # Business Logic and Services
+│   ├── auth_service.dart     # Authentication and job_seeker management
+│   ├── firebase_service.dart # Firebase configuration and setup
+│   ├── pdf_service.dart      # PDF generation and handling
+│   ├── resume_scoring_service.dart # Resume analysis and scoring logic
+│   └── database.dart         # Database operations and queries
+│
+├── models/                   # Data Models
+│   ├── resume.dart          # Resume data structure
+│   ├── experience.dart      # Work experience model
+│   ├── certification.dart   # Certification model
+│   ├── project.dart        # Project model
+│   └── education.dart      # Education model
+│
+├── widgets/                 # Reusable UI Components
+│   ├── experience_card.dart    # Work experience display card
+│   ├── education_card.dart     # Education history card
+│   ├── certification_card.dart # Certification display card
+│   ├── project_card.dart       # Project showcase card
+│   ├── skill_widgets.dart      # Skills display and management
+│   ├── bottom_nav_bar.dart     # Navigation bar component
+│   └── form_fields.dart        # Custom form input fields
+│
+├── theme/                  # App Theming
+│   └── app_theme.dart     # Theme configuration and styles
+│
+└── main.dart              # Application entry point
+
 ```
+
+### Architecture Overview
+
+The application follows a clean architecture pattern with:
+
+1. **Presentation Layer** (screens/ and widgets/)
+
+   - UI components and screens
+   - job_seeker interaction handling
+   - State management
+
+2. **Business Logic Layer** (services/)
+
+   - Authentication logic
+   - Data processing
+   - PDF generation
+   - Resume scoring
+
+3. **Data Layer** (models/)
+
+   - Data structures
+   - Model definitions
+   - Data validation
+
+4. **Infrastructure Layer**
+   - Firebase integration
+   - Database operations
+   - File handling
 
 ## Data Schema
 
 ### Resume Model
 
 ```dart
-class Resume {
-String id;
-String userId;
-Map<String, dynamic> personalInfo; // name, email, phone, etc.
-String summary;
-String objective;
-List<String> skills;
-List<String> languages;
-List<Experience> experiences;
-List<Education> education;
-List<Project> projects;
-List<Certification> certifications;
-String hobbies;
-DateTime? createdAt;
-DateTime? updatedAt;
-String title;
+{
+  id: String,                    // Unique identifier
+  job_seekerId: String,                // Reference to job_seeker
+  personalInfo: {               // Personal information
+    fullName: String,
+    email: String,
+    phone: String,
+    address: String,
+    city: String,
+    state: String,
+    country: String,
+    zipCode: String,
+    linkedinUrl: String,
+    githubUrl: String,
+    portfolioUrl: String,
+    profilePicture: String
+  },
+  summary: String,              // Professional summary
+  objective: String,            // Career objective
+  skills: List<String>,        // Technical and soft skills
+  languages: List<String>,     // Language proficiencies
+  experiences: List<Experience>, // Work experience
+  education: List<Education>,   // Educational background
+  projects: List<Project>,      // Project portfolio
+  certifications: List<Certification>, // Professional certifications
+  hobbies: String,             // Personal interests
+  createdAt: DateTime,         // Creation timestamp
+  updatedAt: DateTime,         // Last update timestamp
+  title: String                // Resume title
 }
 ```
 
 ### Experience Model
 
-     ```dart
-
-class Experience {
-String jobTitle;
-String company;
-String duration;
-String description;
-DateTime? startDate;
-DateTime? endDate;
-bool isCurrent;
+```dart
+{
+  jobTitle: String,     // Job position/title
+  company: String,      // Company name
+  duration: String,     // Employment duration
+  description: String   // Job responsibilities and achievements
 }
-
-````
+```
 
 ### Education Model
 
-   ```dart
-class Education {
-  String degree;
-  String institution;
-  String year;
-  String description;
-  String fieldOfStudy;
-  String grade;
-}
-````
-
-### Project Model
-
 ```dart
-class Project {
-  String title;
-  String description;
-  String technologies;
-  String duration;
-  String url;
+{
+  degree: String,       // Degree or qualification
+  institution: String,  // Educational institution
+  year: String,        // Year of completion
+  description: String  // Additional details or achievements
 }
 ```
 
 ### Certification Model
 
 ```dart
-class Certification {
-  String name;
-  String organization;
-  String year;
-  String credentialId;
-  String url;
+{
+  name: String,         // Certification name
+  organization: String, // Issuing organization
+  year: String         // Year of certification
 }
 ```
+
+### Project Model
+
+```dart
+{
+  title: String,       // Project title
+  description: String  // Project description and details
+}
+```
+
+### Database Collections
+
+1. **job_seekers**
+
+   ```dart
+   {
+     uid: String,              // Firebase Auth UID
+     email: String,            // job_seeker email
+     displayName: String,      // job_seeker's full name
+     photoURL: String,         // Profile picture URL
+     role: String,            // 'job_seeker' or 'recruiter'
+     createdAt: DateTime,     // Account creation date
+     lastLogin: DateTime      // Last login timestamp
+   }
+   ```
+
+2. **resumes**
+
+   ```dart
+   {
+     id: String,              // Auto-generated ID
+     job_seekerId: String,          // Reference to job_seeker
+     title: String,           // Resume title
+     content: Resume,         // Resume data structure
+     isPublic: Boolean,       // Visibility setting
+     createdAt: DateTime,     // Creation date
+     updatedAt: DateTime,     // Last update date
+     template: String,        // Selected template
+     score: Number           // Resume score
+   }
+   ```
+
+3. **jobs**
+
+   ```dart
+   {
+     id: String,              // Auto-generated ID
+     recruiterId: String,     // Reference to recruiter
+     title: String,           // Job title
+     company: String,         // Company name
+     location: String,        // Job location
+     type: String,           // Full-time, Part-time, etc.
+     description: String,     // Job description
+     requirements: List<String>, // Job requirements
+     salary: String,         // Salary range
+     postedAt: DateTime,     // Posting date
+     deadline: DateTime,     // Application deadline
+     status: String         // Active, Closed, etc.
+   }
+   ```
+
+4. **applications**
+   ```dart
+   {
+     id: String,              // Auto-generated ID
+     jobId: String,           // Reference to job
+     job_seekerId: String,          // Reference to applicant
+     resumeId: String,        // Reference to resume
+     status: String,          // Applied, Reviewed, etc.
+     appliedAt: DateTime,     // Application date
+     updatedAt: DateTime      // Last status update
+   }
+   ```
+
+### Database Relationships
+
+1. **job_seeker to Resume**: One-to-Many
+
+   - A job_seeker can have multiple resumes
+   - Each resume belongs to one job_seeker
+
+2. **job_seeker to Application**: One-to-Many
+
+   - A job_seeker can submit multiple applications
+   - Each application belongs to one job_seeker
+
+3. **Job to Application**: One-to-Many
+
+   - A job can receive multiple applications
+   - Each application is for one job
+
+4. **Resume to Application**: One-to-Many
+   - A resume can be used for multiple applications
+   - Each application uses one resume
 
 ## Getting Started
 
 1. Clone the repository
-2. Install dependencies: `flutter pub get`
-3. Configure Firebase
-4. Run the app: `flutter run`
+2. Install Flutter SDK (version >=3.7.2)
+3. Run `flutter pub get` to install dependencies
+4. Configure Firebase project and add necessary credentials
+5. Run the app using `flutter run`
+
+## Platform Support
+
+- Android
+- iOS
+- Web
+
+## Security
+
+- Firebase Authentication for secure job_seeker management
+- Secure data storage in Cloud Firestore
+- Protected API keys and sensitive information
+- Role-based access control for job_seekers and recruiters

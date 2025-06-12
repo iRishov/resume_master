@@ -3,14 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:resume_master/screens/user/login.dart';
+import 'package:resume_master/screens/job_seeker/login.dart';
 import 'package:intl/intl.dart';
-import 'package:resume_master/screens/user/resume_form_page.dart';
+import 'package:resume_master/screens/job_seeker/resume_form.dart';
+import 'package:resume_master/screens/job_seeker/jobs_page.dart';
 import 'package:resume_master/services/auth_service.dart';
-import 'package:resume_master/screens/user/resume_preview.dart';
+import 'package:resume_master/screens/job_seeker/resume_preview.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
-import 'package:resume_master/screens/user/resume_score_screen.dart';
-import 'package:resume_master/screens/user/profile_page.dart';
+import 'package:resume_master/screens/job_seeker/resume_score.dart';
+import 'package:resume_master/screens/job_seeker/profile_page.dart';
 import 'package:resume_master/theme/page_transitions.dart';
 import 'package:resume_master/services/pdf_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -349,30 +350,69 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   }
 
   void _onNavItemTapped(int index) {
-    if (index == _currentIndex) return; // Don't navigate if already on the tab
+    if (_currentIndex == index)
+      return; // Don't do anything if same page is tapped
 
     setState(() {
       _currentIndex = index;
     });
 
-    String route;
+    // Handle navigation based on index
     switch (index) {
-      case 0:
-        return; // Stay on home
-      case 1:
-        route = '/scores';
+      case 0: // Home
+        // Already on home, do nothing
         break;
-      case 2:
-        route = '/jobs';
+      case 1: // Scores
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ResumeScore(),
+            settings: const RouteSettings(name: '/scores'),
+          ),
+        );
         break;
-      case 3:
-        route = '/profile';
+      case 2: // Jobs
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const JobsPage(),
+            settings: const RouteSettings(name: '/jobs'),
+          ),
+        );
         break;
-      default:
-        return;
+      case 3: // Profile
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ProfilePage(),
+            settings: const RouteSettings(name: '/profile'),
+          ),
+        );
+        break;
     }
+  }
 
-    Navigator.pushReplacementNamed(context, route);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update current index based on route
+    final route = ModalRoute.of(context)?.settings.name;
+    if (route != null) {
+      switch (route) {
+        case '/home':
+          _currentIndex = 0;
+          break;
+        case '/scores':
+          _currentIndex = 1;
+          break;
+        case '/jobs':
+          _currentIndex = 2;
+          break;
+        case '/profile':
+          _currentIndex = 3;
+          break;
+      }
+    }
   }
 
   void _showKeywordSuggestion(String keyword) {
@@ -438,166 +478,123 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 120.0,
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).primaryColor,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-              title: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _animatedGreeting,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+    return WillPopScope(
+      onWillPop: () async {
+        // If we're on the home page and it's the root, show exit dialog
+        if (!Navigator.of(context).canPop()) {
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Exit App'),
+                  content: const Text('Are you sure you want to exit?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('No'),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    userName ?? '',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -20,
-                      bottom: -20,
-                      child: Icon(
-                        Icons.description_outlined,
-                        size: 150,
-                        color: Colors.white.withOpacity(0.1),
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Yes'),
                     ),
                   ],
                 ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.help_outline),
-                onPressed: _showResumeGuidelines,
-                tooltip: 'Resume Guidelines',
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadResumes,
-                tooltip: 'Refresh',
-              ),
-            ],
-          ),
+          );
+          return shouldExit ?? false;
+        }
+        return true;
+      },
+      child: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside
+          FocusScope.of(context).unfocus();
+        },
+        child: Scaffold(
+          body: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 140.0,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                floating: true,
+                pinned: false,
+                automaticallyImplyLeading: false,
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                  title: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _animatedGreeting,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
 
-          // Resume Creation Guide Card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  onTap: _showResumeCreationGuide,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 28,
+                      const SizedBox(height: 4),
+                      Text(
+                        userName ?? '',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Resume Creation Guide',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Learn how to create a professional resume',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ],
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(
+                            context,
+                          ).colorScheme.secondary.withOpacity(0.7),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+                elevation: 0,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.help_outline),
+                    onPressed: _showResumeGuidelines,
+                    tooltip: 'Resume Guidelines',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadResumes,
+                    tooltip: 'Refresh',
+                  ),
+                ],
               ),
-            ),
-          ),
 
-          // App Features Card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  onTap: _showAppFeatures,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              // Resume Creation Guide Card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      onTap: _showResumeCreationGuide,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
                           children: [
                             Icon(
-                              Icons.rocket_launch,
+                              Icons.lightbulb_outline,
                               color: Theme.of(context).colorScheme.primary,
                               size: 28,
                             ),
@@ -607,7 +604,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'App Features',
+                                    'Resume Creation Guide',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium?.copyWith(
@@ -618,7 +615,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Discover all the powerful features',
+                                    'Learn how to create a professional resume',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodyMedium?.copyWith(
@@ -637,56 +634,131 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildFeatureChip('Job Search', Icons.work),
-                            _buildFeatureChip(
-                              'Resume Builder',
-                              Icons.edit_document,
-                            ),
-                            _buildFeatureChip('Career Tips', Icons.lightbulb),
-                            _buildFeatureChip(
-                              'Progress Tracking',
-                              Icons.trending_up,
-                            ),
-                            _buildFeatureChip('Export Options', Icons.download),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
 
-          // Create Resume Button
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCreateResumeButton(),
-                  const SizedBox(height: 24),
-                ],
+              // App Features Card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      onTap: _showAppFeatures,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.rocket_launch,
+                                  color: Colors.blue,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'App Features',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Discover all the powerful features',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: Colors.blue,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildFeatureChip('Job Search', Icons.work),
+                                _buildFeatureChip(
+                                  'Resume Builder',
+                                  Icons.edit_document,
+                                ),
+                                _buildFeatureChip(
+                                  'Career Tips',
+                                  Icons.lightbulb,
+                                ),
+                                _buildFeatureChip(
+                                  'Progress Tracking',
+                                  Icons.trending_up,
+                                ),
+                                _buildFeatureChip(
+                                  'Export Options',
+                                  Icons.download,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Resume List Section
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: _buildResumeList(),
+              // Create Resume Button
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCreateResumeButton(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Resume List Section
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                sliver: _buildResumeList(),
+              ),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavItemTapped,
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: _currentIndex,
+            onTap: _onNavItemTapped,
+          ),
+        ),
       ),
     );
   }
@@ -886,23 +958,44 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   }
 
   Widget _buildCreateResumeButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ResumeForm()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Create New Resume'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    return Center(
+      child: Container(
+        width: MediaQuery.of(context).size.width / 2,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ResumeForm()),
+            );
+          },
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'Create New Resume',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
           ),
         ),
       ),
@@ -1411,18 +1504,41 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                           children: [
                             Icon(
                               Icons.rocket_launch,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Colors.blue,
                               size: 28,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'App Features',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'App Features',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Discover all the powerful features',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Colors.blue,
                             ),
                           ],
                         ),
@@ -1508,6 +1624,31 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     IconData icon,
     List<String> features,
   ) {
+    // Define different colors for different features
+    Color iconColor;
+    switch (title) {
+      case 'Resume Scoring':
+        iconColor = Colors.blue;
+        break;
+      case 'Smart Resume Builder':
+        iconColor = Colors.purple;
+        break;
+      case 'Job Search Integration':
+        iconColor = Colors.orange;
+        break;
+      case 'Career Development':
+        iconColor = Colors.green;
+        break;
+      case 'Progress Tracking':
+        iconColor = Colors.red;
+        break;
+      case 'Export & Share':
+        iconColor = Colors.teal;
+        break;
+      default:
+        iconColor = Theme.of(context).colorScheme.primary;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
@@ -1515,11 +1656,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
+              Icon(icon, color: iconColor, size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -1545,11 +1682,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
-                  ),
+                  Icon(Icons.check_circle_outline, color: iconColor, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

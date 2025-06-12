@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:resume_master/screens/user/signup.dart';
-import 'package:resume_master/screens/user/login.dart';
+import 'package:resume_master/screens/job_seeker/signup.dart';
+import 'package:resume_master/screens/job_seeker/login.dart';
 import 'package:resume_master/screens/recruiter/recruiter_signup.dart';
 import 'package:resume_master/screens/recruiter/recruiter_login.dart';
 import 'package:resume_master/services/auth_service.dart';
 import 'package:resume_master/theme/app_theme.dart';
+import 'package:resume_master/theme/page_transitions.dart';
 
 class Forgotpassword extends StatefulWidget {
   final String role;
@@ -88,10 +89,8 @@ class _ForgotpasswordState extends State<Forgotpassword>
         // Navigate to appropriate login page based on role
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder:
-                (context) =>
-                    isRecruiter ? const RecruiterLogin() : const Login(),
+          slidePageRouteBuilder(
+            isRecruiter ? const RecruiterLogin() : const Login(),
           ),
         );
       }

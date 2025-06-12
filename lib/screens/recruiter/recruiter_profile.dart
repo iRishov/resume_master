@@ -204,12 +204,11 @@ class _RecruiterProfileState extends State<RecruiterProfile> {
                     expandedHeight: 120.0,
                     floating: false,
                     pinned: true,
-                    backgroundColor: Theme.of(context).primaryColor,
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
                       title: Text(
                         'Profile',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -219,16 +218,17 @@ class _RecruiterProfileState extends State<RecruiterProfile> {
                       background: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                             colors: [
-                              Theme.of(context).primaryColor,
-                              Theme.of(context).primaryColor.withOpacity(0.8),
+                              Theme.of(context).primaryColorDark,
+                              Theme.of(context).colorScheme.primary,
                             ],
                           ),
                         ),
                       ),
                     ),
+                    elevation: 0,
                     actions: [
                       if (!_isEditing)
                         IconButton(

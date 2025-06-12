@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:resume_master/screens/user/resume_form_page.dart';
+import 'package:resume_master/screens/job_seeker/resume_form.dart';
 import 'package:resume_master/widgets/bottom_nav_bar.dart';
-import 'package:resume_master/screens/user/home.dart';
-import 'package:resume_master/screens/user/profile_page.dart';
+import 'package:resume_master/screens/job_seeker/home.dart';
+import 'package:resume_master/screens/job_seeker/profile_page.dart';
+import 'package:resume_master/screens/job_seeker/jobs_page.dart';
 import 'package:resume_master/services/resume_scoring_service.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:resume_master/theme/page_transitions.dart';
 
-class ResumeScoreScreen extends StatefulWidget {
-  const ResumeScoreScreen({super.key});
+class ResumeScore extends StatefulWidget {
+  const ResumeScore({super.key});
 
   @override
-  State<ResumeScoreScreen> createState() => _ResumeScoreScreenState();
+  State<ResumeScore> createState() => _ResumeScoreState();
 }
 
-class _ResumeScoreScreenState extends State<ResumeScoreScreen>
+class _ResumeScoreState extends State<ResumeScore>
     with SingleTickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -44,6 +45,29 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update current index based on route
+    final route = ModalRoute.of(context)?.settings.name;
+    if (route != null) {
+      switch (route) {
+        case '/home':
+          _currentIndex = 0;
+          break;
+        case '/scores':
+          _currentIndex = 1;
+          break;
+        case '/jobs':
+          _currentIndex = 2;
+          break;
+        case '/profile':
+          _currentIndex = 3;
+          break;
+      }
+    }
   }
 
   Future<void> _fetchResumes() async {
@@ -162,24 +186,26 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
       _currentIndex = index;
     });
 
-    String route;
     switch (index) {
-      case 0:
-        route = '/home';
+      case 0: // Home
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
         break;
-      case 1:
-        return; // Stay on scores
-      case 2:
-        route = '/jobs';
+      case 1: // Scores
+        // Already on scores page
         break;
-      case 3:
-        route = '/profile';
+      case 2: // Jobs
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const JobsPage()),
+        );
         break;
-      default:
-        return;
+      case 3: // Profile
+        Navigator.pushReplacement(
+          context,
+          slidePageRouteBuilder(const ProfilePage()),
+        );
+        break;
     }
-
-    Navigator.pushReplacementNamed(context, route);
   }
 
   Widget _buildSectionScore(double score, String section) {
@@ -187,11 +213,11 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
     final scorePercentage = (score * 100).round().clamp(0, 100);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
         color: _getSectionColor(score),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _getBorderColor(score), width: 2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _getBorderColor(score), width: 1),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
@@ -204,7 +230,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_getSectionIcon(section), color: color, size: 18),
+          Icon(_getSectionIcon(section), color: color, size: 16),
           const SizedBox(width: 4),
           Flexible(
             child: Text(
@@ -212,7 +238,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: color,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 12,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -344,14 +370,14 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(badgeIcon, color: badgeColor, size: 24),
-          const SizedBox(width: 10),
+          Icon(badgeIcon, color: badgeColor, size: 20),
+          const SizedBox(width: 5),
           Text(
             badgeLabel,
             style: TextStyle(
               color: badgeColor,
               fontWeight: FontWeight.bold,
-              fontSize: 15,
+              fontSize: 14,
             ),
           ),
         ],
@@ -376,8 +402,8 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            Theme.of(context).colorScheme.primary.withOpacity(0.05),
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.secondary.withOpacity(0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(24),
@@ -392,65 +418,34 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 500) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildScoreSection(averageScore),
+                    const SizedBox(height: 15),
+                    _buildBadgeSection(
+                      highestBadge,
+                      highestBadgeIcon,
+                      highestBadgeColor,
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Average Score',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${averageScore.toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: _scoreColor(averageScore / 100),
-                    ),
+                  _buildScoreSection(averageScore),
+                  _buildBadgeSection(
+                    highestBadge,
+                    highestBadgeIcon,
+                    highestBadgeColor,
                   ),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: highestBadgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: highestBadgeColor.withOpacity(0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: highestBadgeColor.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(highestBadgeIcon, color: highestBadgeColor, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      highestBadge,
-                      style: TextStyle(
-                        color: highestBadgeColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           Row(
@@ -459,9 +454,9 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
               Text(
                 'Total Resumes: ${resumes.length}',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               TextButton.icon(
@@ -472,12 +467,77 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                   ).then((_) => _fetchResumes());
                 },
                 icon: const Icon(Icons.add),
-                label: const Text('Create New'),
+                label: const Text('Create'),
                 style: TextButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreSection(double averageScore) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Average Score',
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.grey[700],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${averageScore.toStringAsFixed(0)}%',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: _scoreColor(averageScore / 100),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBadgeSection(
+    String highestBadge,
+    IconData highestBadgeIcon,
+    Color highestBadgeColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: highestBadgeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: highestBadgeColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: highestBadgeColor.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(highestBadgeIcon, color: highestBadgeColor, size: 20),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              highestBadge,
+              style: TextStyle(
+                color: highestBadgeColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -544,7 +604,7 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                     const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 15,
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
@@ -571,18 +631,18 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 5),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildBadge(averageScore / 100),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 3,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 5,
+                      crossAxisSpacing: 10,
                       childAspectRatio: 1.8,
                       children:
                           sectionScores.entries.map((entry) {
@@ -599,8 +659,8 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
                   ),
                 ),
                 child: Padding(
@@ -750,136 +810,173 @@ class _ResumeScoreScreenState extends State<ResumeScoreScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Navigate back to home page
+        Navigator.pushReplacement(context, slidePageRouteBuilder(const Home()));
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          toolbarHeight: 70,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                ],
+              ),
             ),
           ),
-        ),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Resume Scores',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'CrimsonText',
-            color: Colors.white,
+          title: const Text(
+            'Scores',
+            style: TextStyle(
+              fontFamily: 'CrimsonText',
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 30,
+            ),
           ),
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _fetchResumes,
+              tooltip: 'Refresh',
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _fetchResumes,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _fetchResumes,
-          child:
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _resumes.isEmpty
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.description_outlined,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'No Resumes Found',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Create your first resume to see scores',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ResumeForm(),
-                              ),
-                            ).then((_) => _fetchResumes());
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Resume'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  : AnimationLimiter(
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: AnimationConfiguration.toStaggeredList(
-                        duration: const Duration(milliseconds: 375),
-                        childAnimationBuilder:
-                            (widget) => SlideAnimation(
-                              horizontalOffset: 50.0,
-                              child: FadeInAnimation(child: widget),
-                            ),
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _fetchResumes,
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _resumes.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildAverageStats(_resumes),
-                          ..._resumes.map((resume) => _buildResumeCard(resume)),
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.assignment_outlined,
+                                  size: 64,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.secondary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.analytics_outlined,
+                                      size: 24,
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'No Resumes Found',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Create your first resume to see scores',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ResumeForm(),
+                                ),
+                              ).then((_) => _fetchResumes());
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Resume'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
+                    )
+                    : AnimationLimiter(
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: AnimationConfiguration.toStaggeredList(
+                          duration: const Duration(milliseconds: 375),
+                          childAnimationBuilder:
+                              (widget) => SlideAnimation(
+                                horizontalOffset: 50.0,
+                                child: FadeInAnimation(child: widget),
+                              ),
+                          children: [
+                            _buildAverageStats(_resumes),
+                            ..._resumes.map(
+                              (resume) => _buildResumeCard(resume),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+          ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: _onNavTap,
+        ),
       ),
     );
   }
