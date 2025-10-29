@@ -2,10 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:resume_master/screens/job_seeker/home.dart';
-import 'package:resume_master/services/auth_service.dart' as auth;
-import 'package:resume_master/services/database.dart';
-import 'package:resume_master/services/firebase_service.dart';
 import 'package:vibration/vibration.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -56,7 +52,12 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await Future.wait([_googleSignIn.signOut(), _auth.signOut()]);
+      // Disconnect from Google first
+      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
+      
+      // Then sign out from Firebase Auth
+      await _auth.signOut();
     } on FirebaseException catch (e) {
       throw AuthException(
         'Error signing out: ${e.message}',
@@ -188,10 +189,18 @@ class AuthService {
         }
       }
 
-      // Check if email already exists
+      // Check if email already exists (best-effort).
+      // Note: some firebase_auth SDK versions may not provide fetchSignInMethodsForEmail;
+      // we fall back to checking the users Firestore collection and let createUserWithEmailAndPassword
+      // surface any FirebaseAuth 'email-already-in-use' errors for accounts that exist only in Auth.
       try {
-        final methods = await _auth.fetchSignInMethodsForEmail(email);
-        if (methods.isNotEmpty) {
+        final query =
+            await _firestore
+                .collection('users')
+                .where('email', isEqualTo: email)
+                .limit(1)
+                .get();
+        if (query.docs.isNotEmpty) {
           throw AuthException(
             'An account already exists with this email. Please use the login page instead.',
             code: 'email-already-in-use',
@@ -199,7 +208,8 @@ class AuthService {
         }
       } catch (e) {
         if (e is AuthException) rethrow;
-        // Ignore other errors and proceed with signup
+        // Ignore other errors and proceed with signup; FirebaseAuth will still throw
+        // 'email-already-in-use' from createUserWithEmailAndPassword if needed.
       }
 
       showMessage('Creating your account...', true);
@@ -447,8 +457,11 @@ class AuthService {
 
   Future<UserCredential> signInWithGoogle() async {
     try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      // Disconnect from previous Google account to force account selection
+      await _googleSignIn.signOut();
+      
+      // Trigger the authentication flow (this will show account selector)
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         throw AuthException('Google sign in was cancelled');

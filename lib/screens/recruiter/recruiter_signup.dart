@@ -1,6 +1,5 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:resume_master/screens/recruiter/recruiter_login.dart';
 import 'package:resume_master/screens/recruiter/recruiter_home.dart';
@@ -10,6 +9,7 @@ import 'package:resume_master/theme/app_theme.dart';
 import 'package:resume_master/theme/page_transitions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vibration/vibration.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
 
 class RecruiterSignUp extends StatefulWidget {
   const RecruiterSignUp({super.key});
@@ -73,22 +73,11 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
 
   void _showMessage(String message, bool isSuccess) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: isSuccess ? Colors.green : Colors.red,
-            fontSize: 16,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (isSuccess) {
+      FeedbackSnackBar.showSuccess(context, message);
+    } else {
+      FeedbackSnackBar.showError(context, message);
+    }
   }
 
   Future<void> _checkAuth() async {
@@ -132,22 +121,6 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
       });
 
       try {
-        // First check if email is already registered
-        final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
-          _emailController.text.trim(),
-        );
-        if (methods.isNotEmpty) {
-          if (!mounted) return;
-          _showMessage(
-            'This email is already registered. Please use the login page instead.',
-            false,
-          );
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-
         await _authService.signUpUser(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -158,24 +131,11 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
           position: _positionController.text.trim(),
           showMessage: (message, isSuccess) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  message,
-                  style: TextStyle(
-                    color: isSuccess ? Colors.green : Colors.red,
-                    fontSize: 16,
-                  ),
-                ),
-                backgroundColor: Colors.white,
-                duration: const Duration(seconds: 3),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
+            if (isSuccess) {
+              FeedbackSnackBar.showSuccess(context, message);
+            } else {
+              FeedbackSnackBar.showError(context, message);
+            }
           },
           onSuccess: () async {
             if (!mounted) return;
@@ -200,11 +160,16 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
               }
             }
 
+            // Show success message
+            _showMessage('Account created successfully! Welcome aboard!', true);
+            
             // Provide haptic feedback for successful signup
             if (await Vibration.hasVibrator()) {
               Vibration.vibrate(duration: 50);
             }
 
+            // Small delay to show success message before navigation
+            await Future.delayed(const Duration(milliseconds: 500));
             if (!mounted) return;
             Navigator.pushReplacement(
               context,
@@ -214,7 +179,11 @@ class _RecruiterSignUpState extends State<RecruiterSignUp>
         );
       } catch (e) {
         if (!mounted) return;
-        _showMessage(e.toString(), false);
+        final errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _showMessage(
+          errorMessage.isEmpty ? 'An error occurred during signup' : errorMessage,
+          false,
+        );
       } finally {
         if (mounted) {
           setState(() {

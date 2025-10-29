@@ -20,6 +20,8 @@ import 'dart:io';
 import 'package:resume_master/models/resume.dart';
 import 'package:resume_master/services/resume_scoring_service.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
+import 'package:vibration/vibration.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -1031,19 +1033,24 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
   Future<void> _signOut() async {
     try {
+      // Add vibration feedback
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 50);
+      }
+
+      // Show logout info message
+      FeedbackSnackBar.showInfo(context, 'Logging out...');
+
       await _authService.signOut();
+
+      // Brief delay to show the message
+      await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, '/startup');
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error signing out: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      FeedbackSnackBar.showError(context, 'Error signing out: ${e.toString()}');
     }
   }
 

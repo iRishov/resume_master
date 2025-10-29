@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:resume_master/screens/job_seeker/home.dart';
 import 'package:resume_master/screens/job_seeker/login.dart';
@@ -7,6 +6,7 @@ import 'package:resume_master/services/firebase_service.dart';
 import 'package:resume_master/theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vibration/vibration.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
 
 class SignUp extends StatefulWidget {
   const SignUp({super.key});
@@ -64,22 +64,11 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
 
   void _showMessage(String message, bool isSuccess) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: isSuccess ? Colors.green : Colors.red,
-            fontSize: 16,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (isSuccess) {
+      FeedbackSnackBar.showSuccess(context, message);
+    } else {
+      FeedbackSnackBar.showError(context, message);
+    }
   }
 
   Future<void> _checkAuth() async {
@@ -114,22 +103,6 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
       });
 
       try {
-        // First check if email is already registered
-        final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
-          _emailController.text.trim(),
-        );
-        if (methods.isNotEmpty) {
-          if (!mounted) return;
-          _showMessage(
-            'This email is already registered. Please use the login page instead.',
-            false,
-          );
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-
         await _authService.signUpUser(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -138,24 +111,11 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
           role: 'job_seeker',
           showMessage: (message, isSuccess) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  message,
-                  style: TextStyle(
-                    color: isSuccess ? Colors.green : Colors.red,
-                    fontSize: 16,
-                  ),
-                ),
-                backgroundColor: Colors.white,
-                duration: const Duration(seconds: 3),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
+            if (isSuccess) {
+              FeedbackSnackBar.showSuccess(context, message);
+            } else {
+              FeedbackSnackBar.showError(context, message);
+            }
           },
           onSuccess: () async {
             if (!mounted) return;
@@ -180,11 +140,16 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
               }
             }
 
+            // Show success message
+            _showMessage('Account created successfully! Welcome aboard!', true);
+            
             // Provide haptic feedback for successful signup
             if (await Vibration.hasVibrator()) {
               Vibration.vibrate(duration: 50);
             }
 
+            // Small delay to show success message before navigation
+            await Future.delayed(const Duration(milliseconds: 500));
             if (!mounted) return;
             Navigator.pushReplacementNamed(context, '/home');
           },
@@ -229,10 +194,16 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
               );
               return;
             } else {
+              // Show success message
+              _showMessage('Welcome! Setting up your account...', true);
+              
               // If user is a job seeker, provide haptic feedback and proceed to home
               if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 50);
               }
+              
+              // Small delay to show success message before navigation
+              await Future.delayed(const Duration(milliseconds: 500));
               if (!mounted) return;
               Navigator.pushReplacementNamed(context, '/home');
             }
@@ -241,7 +212,13 @@ class _SignUpState extends State<SignUp> with SingleTickerProviderStateMixin {
       }
     } catch (e) {
       if (!mounted) return;
-      _showMessage(e.toString(), false);
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _showMessage(
+        errorMessage.contains('Google sign in was cancelled')
+            ? 'Sign in cancelled'
+            : errorMessage,
+        false,
+      );
     } finally {
       if (mounted) {
         setState(() {

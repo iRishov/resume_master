@@ -51,6 +51,41 @@ class MyApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: 'Resume Master',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final width = mediaQuery.size.width;
+        final textScaleFactor = mediaQuery.textScaleFactor;
+        
+        // Calculate responsive text scale based on screen width
+        double responsiveScale = 1.0;
+        
+        if (width < 360) {
+          // Small phones
+          responsiveScale = 0.85;
+        } else if (width < 400) {
+          // Regular phones
+          responsiveScale = 0.9;
+        } else if (width < 768) {
+          // Large phones
+          responsiveScale = 1.0;
+        } else if (width < 1024) {
+          // Tablets
+          responsiveScale = 1.15;
+        } else {
+          // Large screens
+          responsiveScale = 1.25;
+        }
+        
+        // Combine with accessibility text scale factor
+        final scale = (responsiveScale * textScaleFactor).clamp(0.8, 1.5);
+        
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaleFactor: scale,
+          ),
+          child: child!,
+        );
+      },
       theme: AppTheme.lightTheme,
       initialRoute: '/splash',
       routes: {

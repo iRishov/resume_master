@@ -11,6 +11,7 @@ import 'package:resume_master/theme/app_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vibration/vibration.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -65,22 +66,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
   void _showMessage(String message, bool isSuccess) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: isSuccess ? Colors.green : Colors.red,
-            fontSize: 16,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (isSuccess) {
+      FeedbackSnackBar.showSuccess(context, message);
+    } else {
+      FeedbackSnackBar.showError(context, message);
+    }
   }
 
   Future<void> _checkAuth() async {
@@ -121,24 +111,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         expectedRole: 'job_seeker',
         showMessage: (message, isSuccess) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                message,
-                style: TextStyle(
-                  color: isSuccess ? Colors.green : Colors.red,
-                  fontSize: 16,
-                ),
-              ),
-              backgroundColor: Colors.white,
-              duration: const Duration(seconds: 3),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          if (isSuccess) {
+            FeedbackSnackBar.showSuccess(context, message);
+          } else {
+            FeedbackSnackBar.showError(context, message);
+          }
         },
         onSuccess: () async {
           if (!mounted) return;
@@ -160,10 +137,14 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                 );
                 return;
               } else {
-                // If user is a job seeker, provide haptic feedback and proceed to home
+                // Show success message before navigation
                 if (await Vibration.hasVibrator()) {
                   Vibration.vibrate(duration: 50);
                 }
+                if (!mounted) return;
+                _showMessage('Welcome back! Logging you in...', true);
+                // Small delay to show success message before navigation
+                await Future.delayed(const Duration(milliseconds: 500));
                 if (!mounted) return;
                 Navigator.pushReplacementNamed(context, '/home');
               }
@@ -223,6 +204,10 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                 Vibration.vibrate(duration: 50);
               }
               if (!mounted) return;
+              _showMessage('Welcome back! Logging you in...', true);
+              // Small delay to show success message before navigation
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (!mounted) return;
               Navigator.pushReplacementNamed(context, '/home');
             }
           }
@@ -230,7 +215,13 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       }
     } catch (e) {
       if (!mounted) return;
-      _showMessage(e.toString(), false);
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _showMessage(
+        errorMessage.contains('Google sign in was cancelled')
+            ? 'Sign in cancelled'
+            : errorMessage,
+        false,
+      );
     } finally {
       if (mounted) {
         setState(() {

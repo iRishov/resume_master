@@ -11,6 +11,7 @@ import 'package:resume_master/theme/page_transitions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:resume_master/screens/job_seeker/forgot_password.dart';
 import 'package:vibration/vibration.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
 
 class RecruiterLogin extends StatefulWidget {
   const RecruiterLogin({super.key});
@@ -66,22 +67,11 @@ class _RecruiterLoginState extends State<RecruiterLogin>
 
   void _showMessage(String message, bool isSuccess) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: isSuccess ? Colors.green : Colors.red,
-            fontSize: 16,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    if (isSuccess) {
+      FeedbackSnackBar.showSuccess(context, message);
+    } else {
+      FeedbackSnackBar.showError(context, message);
+    }
   }
 
   Future<void> _checkAuth() async {
@@ -131,24 +121,11 @@ class _RecruiterLoginState extends State<RecruiterLogin>
           expectedRole: 'recruiter',
           showMessage: (message, isSuccess) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  message,
-                  style: TextStyle(
-                    color: isSuccess ? Colors.green : Colors.red,
-                    fontSize: 16,
-                  ),
-                ),
-                backgroundColor: Colors.white,
-                duration: const Duration(seconds: 3),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
+            if (isSuccess) {
+              FeedbackSnackBar.showSuccess(context, message);
+            } else {
+              FeedbackSnackBar.showError(context, message);
+            }
           },
           onSuccess: () async {
             if (!mounted) return;
@@ -170,10 +147,14 @@ class _RecruiterLoginState extends State<RecruiterLogin>
                   );
                   return;
                 } else {
-                  // If user is a recruiter, provide haptic feedback and proceed to recruiter home
+                  // Show success message before navigation
                   if (await Vibration.hasVibrator()) {
                     Vibration.vibrate(duration: 50);
                   }
+                  if (!mounted) return;
+                  _showMessage('Welcome back! Logging you in...', true);
+                  // Small delay to show success message before navigation
+                  await Future.delayed(const Duration(milliseconds: 500));
                   if (!mounted) return;
                   Navigator.pushReplacement(
                     context,
@@ -186,7 +167,11 @@ class _RecruiterLoginState extends State<RecruiterLogin>
         );
       } catch (e) {
         if (!mounted) return;
-        _showMessage(e.toString(), false);
+        final errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _showMessage(
+          errorMessage.isEmpty ? 'An error occurred during login' : errorMessage,
+          false,
+        );
       } finally {
         if (mounted) {
           setState(() {

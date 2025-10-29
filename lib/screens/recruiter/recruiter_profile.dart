@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:resume_master/services/auth_service.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
+import 'package:vibration/vibration.dart';
 
 class RecruiterProfile extends StatefulWidget {
   const RecruiterProfile({super.key});
@@ -167,17 +169,32 @@ class _RecruiterProfileState extends State<RecruiterProfile> {
     if (shouldLogout != true) return;
 
     try {
+      // Add vibration feedback
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 50);
+      }
+
+      // Show logout info message
+      FeedbackSnackBar.showInfo(context, 'Logging out...');
+
       await _authService.signOut();
+
+      // Brief delay to show the message
+      await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
+        FeedbackSnackBar.showSuccess(context, 'Logged out successfully');
+
+        // Delay navigation to show the success message
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+
         Navigator.pushReplacementNamed(context, '/startup');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error signing out: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        FeedbackSnackBar.showError(
+          context,
+          'Error signing out: ${e.toString()}',
         );
       }
     }

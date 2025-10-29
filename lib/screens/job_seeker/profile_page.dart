@@ -14,6 +14,8 @@ import 'package:resume_master/screens/job_seeker/home.dart';
 import 'package:resume_master/theme/page_transitions.dart';
 import 'package:intl/intl.dart';
 import 'package:resume_master/screens/job_seeker/jobs_page.dart';
+import 'package:resume_master/widgets/feedback_snackbar.dart';
+import 'package:vibration/vibration.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -594,8 +596,26 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (shouldLogout == true) {
       try {
+        // Add vibration feedback
+        if (await Vibration.hasVibrator()) {
+          Vibration.vibrate(duration: 50);
+        }
+
+        // Show logout success message
+        FeedbackSnackBar.showInfo(context, 'Logging out...');
+
         await _auth.signOut();
+
+        // Show success message with a brief delay
+        await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
+
+        FeedbackSnackBar.showSuccess(context, 'Logged out successfully');
+
+        // Delay navigation to show the message
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/startup',
@@ -603,11 +623,9 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error logging out: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        FeedbackSnackBar.showError(
+          context,
+          'Error logging out: ${e.toString()}',
         );
       }
     }
